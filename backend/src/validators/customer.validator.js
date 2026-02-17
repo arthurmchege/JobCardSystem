@@ -14,9 +14,8 @@ const createCustomerSchema = Joi.object({
   
   email: Joi.string()
     .email()
-    .required()
+    .allow('', null)
     .messages({
-      'string.empty': 'Email is required',
       'string.email': 'Email must be valid'
     }),
   
@@ -48,8 +47,7 @@ const createCustomerSchema = Joi.object({
     })
 });
 
-//Validation schema for updating customer
-
+// Validation schema for updating customer
 const updateCustomerSchema = Joi.object({
   name: Joi.string()
     .min(2)
@@ -61,6 +59,7 @@ const updateCustomerSchema = Joi.object({
   
   email: Joi.string()
     .email()
+    .allow('', null)
     .messages({
       'string.email': 'Email must be valid'
     }),

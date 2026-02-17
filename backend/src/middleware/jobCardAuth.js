@@ -8,15 +8,8 @@ const pool = require('../config/database');
 
 const verifyJobCardOwnership = async (req, res, next) => {
     try {
-        // Extract job card ID from URL parameter
-        const jobCardId = parseInt(req.params.id);
-
-        if (isNaN(jobCardId)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid job card ID'
-            });
-        }
+        // Extract job card ID from URL parameter - UUID kept as string
+        const jobCardId = req.params.id;
 
         // Get the logged-in user's info from req.user
         // authenticate middleware already set this
@@ -32,7 +25,7 @@ const verifyJobCardOwnership = async (req, res, next) => {
         // Query: Get the technician_id for this job card
         const result = await pool.query(
             'SELECT technician_id FROM job_cards WHERE id = $1',
-            [jobCardId]
+            [jobCardId]  // UUID string passed directly
         );
 
         // Job card doesn't exist
@@ -45,12 +38,11 @@ const verifyJobCardOwnership = async (req, res, next) => {
 
         const jobTechnicianId = result.rows[0].technician_id;
 
-        // Check if technician owns this job
+        // Check if technician owns this job - compare UUIDs as strings
         if (jobTechnicianId !== userId) {
             return res.status(403).json({
                 success: false,
-                error: 'Forbidden: You can only access your own assigned job cards',
-                message: `This job is assigned to technician ID ${jobTechnicianId}, but you are user ID ${userId}`
+                error: 'Forbidden: You can only access your own assigned job cards'
             });
         }
 
@@ -78,7 +70,8 @@ const filterJobCardsByRole = (req, res, next) => {
             // Override any technician_id from query params
             // This prevents technicians from accessing other technicians' jobs
             // by manipulating the query string
-            req.query.technician_id = userId.toString();
+            // UUID kept as string - no toString() conversion needed
+            req.query.technician_id = userId;
         }
 
         // Supervisors: No automatic filtering

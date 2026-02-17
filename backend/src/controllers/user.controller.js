@@ -37,14 +37,8 @@ const getAllUsers = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id);  
-    
-    if (isNaN(userId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid user ID'
-      });
-    }
+    // UUID is kept as string - NO parseInt or isNaN check
+    const userId = req.params.id;
     
     const user = await userService.getUserById(userId);
     
@@ -70,14 +64,8 @@ const getUserById = async (req, res) => {
  */
 const updateUser = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id);
-    
-    if (isNaN(userId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid user ID'
-      });
-    }
+    // UUID is kept as string - NO parseInt or isNaN check
+    const userId = req.params.id;
     
     // Check authorization
     // Technicians can only update their own profile
@@ -115,14 +103,8 @@ const updateUser = async (req, res) => {
  */
 const deleteUser = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id);
-    
-    if (isNaN(userId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid user ID'
-      });
-    }
+    // UUID is kept as string - NO parseInt or isNaN check
+    const userId = req.params.id;
     
     // Prevent users from deleting themselves
     if (req.user.userId === userId) {

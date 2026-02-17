@@ -71,8 +71,8 @@ const CreateJobCard = () => {
     setSubmitting(true);
     try {
       const payload = {
-        customer_id:   Number(form.customer_id),
-        technician_id: Number(form.technician_id),
+        customer_id:   form.customer_id,
+        technician_id: form.technician_id,
         title:         form.title.trim(),
         priority:      form.priority,
         scheduled_date: form.scheduled_date,

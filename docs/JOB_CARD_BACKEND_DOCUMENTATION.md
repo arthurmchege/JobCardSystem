@@ -1,6 +1,6 @@
 # Job Card Management System - Backend Technical Documentation
 
-**Developer:** Solo Project  
+**Developer:** Arthur Mulunda
 **Technology Stack:** Node.js, Express.js, PostgreSQL, JWT  
 **Status:** Development (with mock data)  
 **Presentation Duration:** 1-2 hours  
@@ -30,6 +30,7 @@
 ### 1.1 Problem Statement
 
 Copy Cat Group sends technicians to customer sites for photocopier installations, maintenance, and repairs. The existing paper-based job card system suffers from:
+
 - **Lost or delayed job cards** (no central tracking)
 - **Lack of real-time visibility** (supervisors can't monitor progress)
 - **Poor accountability** (no audit trail)
@@ -38,6 +39,7 @@ Copy Cat Group sends technicians to customer sites for photocopier installations
 ### 1.2 Solution
 
 A digital job card management system with:
+
 - **Role-based dashboards** (Technician vs Supervisor views)
 - **Real-time job tracking** (pending → in progress → completed)
 - **Audit trail** (status history logging)
@@ -45,14 +47,14 @@ A digital job card management system with:
 
 ### 1.3 Tech Stack Justification
 
-| Technology | Reason for Selection |
-|------------|---------------------|
-| **Node.js** | Non-blocking I/O ideal for API servers; JavaScript across stack |
-| **Express.js** | Minimal, unopinionated; excellent middleware ecosystem |
+| Technology     | Reason for Selection                                               |
+| -------------- | ------------------------------------------------------------------ |
+| **Node.js**    | Non-blocking I/O ideal for API servers; JavaScript across stack    |
+| **Express.js** | Minimal, unopinionated; excellent middleware ecosystem             |
 | **PostgreSQL** | ACID compliance; complex relationships; data integrity constraints |
-| **JWT** | Stateless authentication; scalable across multiple servers |
-| **Bcrypt** | Industry-standard password hashing; configurable salt rounds |
-| **Joi** | Schema-based validation; clear error messages |
+| **JWT**        | Stateless authentication; scalable across multiple servers         |
+| **Bcrypt**     | Industry-standard password hashing; configurable salt rounds       |
+| **Joi**        | Schema-based validation; clear error messages                      |
 
 ---
 
@@ -167,7 +169,7 @@ Let's trace a request to **start a job card**:
                                               ┌──────▼──────────┐
                                               │ Response        │
                                               └─────────────────┘
-                                          
+
                                           200 OK
                                           {
                                             "success": true,
@@ -184,12 +186,13 @@ While not explicitly named, the **service layer** acts as a repository:
 
 ```javascript
 // Services abstract database operations
-jobCardService.getById(id)      // Hides SQL implementation
-jobCardService.create(data)     // Centralizes validation
-jobCardService.update(id, data) // Single source of truth
+jobCardService.getById(id); // Hides SQL implementation
+jobCardService.create(data); // Centralizes validation
+jobCardService.update(id, data); // Single source of truth
 ```
 
 **Benefits:**
+
 - Database logic stays out of controllers
 - Easy to mock for testing
 - Can swap databases without changing controllers
@@ -199,11 +202,12 @@ jobCardService.update(id, data) // Single source of truth
 Express middleware forms a **Chain of Responsibility**:
 
 ```javascript
-router.patch('/:id',
-  authenticate,           // Step 1: Who are you?
+router.patch(
+  "/:id",
+  authenticate, // Step 1: Who are you?
   verifyJobCardOwnership, // Step 2: Do you own this?
-  validateRequest(schema),// Step 3: Is data valid?
-  updateJobCard           // Step 4: Process request
+  validateRequest(schema), // Step 3: Is data valid?
+  updateJobCard, // Step 4: Process request
 );
 ```
 
@@ -215,14 +219,14 @@ Custom error creation:
 
 ```javascript
 // services/jobCard.service.js
-const error = new Error('Job card not found');
-error.statusCode = 404;  // Factory adds properties
+const error = new Error("Job card not found");
+error.statusCode = 404; // Factory adds properties
 throw error;
 
 // Caught by error handler middleware
 res.status(error.statusCode || 500).json({
   success: false,
-  error: error.message
+  error: error.message,
 });
 ```
 
@@ -239,7 +243,7 @@ res.status(error.statusCode || 500).json({
 │ id (PK)         │           │ id (PK)          │
 │ name            │           │ name             │
 │ email (UNIQUE)  │           │ email            │
-│ password_hash   │           │ phone            │
+│ password   │           │ phone            │
 │ role            │◄──┐       │ address          │◄──┐
 │ phone           │   │       │ contact_person   │   │
 │ created_at      │   │       │ created_at       │   │
@@ -289,11 +293,14 @@ res.status(error.statusCode || 500).json({
 #### 3.2.1 Users Table
 
 ```sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(100) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL CHECK (role IN ('technician', 'supervisor')),
   phone VARCHAR(20),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -307,16 +314,23 @@ CREATE INDEX idx_users_role ON users(role);
 
 **Key Design Decisions:**
 
-1. **Email as unique identifier**: Natural key for authentication
-2. **Role constraint**: Only 2 roles (simplifies RBAC)
-3. **No soft deletes**: RESTRICT on foreign keys prevents orphaned records
-4. **Timestamps**: Audit trail for account creation/updates
+1. **UUID primary key**: Globally unique, secure, distributed-system ready
+2. **Email as unique identifier**: Natural key for authentication
+3. **Role constraint**: Only 2 roles (simplifies RBAC)
+4. **No soft deletes**: RESTRICT on foreign keys prevents orphaned records
+5. **Timestamps**: Audit trail for account creation/updates
+
+**UUID Benefits:**
+
+- Cannot enumerate users by incrementing IDs
+- Secure against ID prediction attacks
+- Works in multi-region deployments without coordination
 
 #### 3.2.2 Customers Table
 
 ```sql
 CREATE TABLE customers (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(200) NOT NULL,
   address TEXT NOT NULL,
   phone VARCHAR(20) NOT NULL,
@@ -327,26 +341,34 @@ CREATE TABLE customers (
 );
 
 CREATE INDEX idx_customers_name ON customers(name);
+CREATE INDEX idx_customers_phone ON customers(phone);
 ```
 
 **Key Design Decisions:**
 
-1. **Separate from users**: Customers aren't system users (no login)
-2. **Nullable email**: Some customers may only have phone contact
-3. **contact_person optional**: Useful for corporate clients
+1. **UUID primary key**: Globally unique customer identification
+2. **Separate from users**: Customers aren't system users (no login)
+3. **Nullable email**: Some customers may only have phone contact
+4. **contact_person optional**: Useful for corporate clients
+
+**Why UUID for customers:**
+
+- Prevents customer enumeration
+- Allows offline customer creation (mobile app future)
+- Database merging without ID conflicts
 
 #### 3.2.3 Job Cards Table (Core Entity)
 
 ```sql
 CREATE TABLE job_cards (
-  id SERIAL PRIMARY KEY,
-  customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
-  technician_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  technician_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   title VARCHAR(200) NOT NULL,
   description TEXT,
-  status VARCHAR(20) NOT NULL DEFAULT 'pending' 
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'in_progress', 'completed')),
-  priority VARCHAR(20) NOT NULL DEFAULT 'medium' 
+  priority VARCHAR(20) NOT NULL DEFAULT 'medium'
     CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   scheduled_date TIMESTAMP NOT NULL,
   estimated_duration INTEGER,  -- minutes
@@ -358,12 +380,12 @@ CREATE TABLE job_cards (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP,
-  
+
   -- Constraint: Only technicians can be assigned
   CONSTRAINT valid_technician_role CHECK (
     (SELECT role FROM users WHERE id = technician_id) = 'technician'
   ),
-  
+
   -- Constraint: End time must be after start time
   CONSTRAINT valid_times CHECK (
     actual_end_time IS NULL OR actual_start_time IS NULL
@@ -376,25 +398,40 @@ CREATE INDEX idx_job_cards_status ON job_cards(status);
 CREATE INDEX idx_job_cards_technician ON job_cards(technician_id);
 CREATE INDEX idx_job_cards_customer ON job_cards(customer_id);
 CREATE INDEX idx_job_cards_scheduled_date ON job_cards(scheduled_date);
+CREATE INDEX idx_job_cards_created_at ON job_cards(created_at);
 ```
 
 **Key Design Decisions:**
 
-1. **Status enum**: Only 3 states (simple state machine)
-2. **RESTRICT on deletes**: Cannot delete customer/tech with active jobs
-3. **Nullable actual times**: Only populated when job starts/ends
-4. **CHECK constraints**: Database-level validation (defense in depth)
-5. **customer_signature**: Prepared for future PDF generation
+1. **UUID primary key**: Cannot predict or enumerate job cards
+2. **UUID foreign keys**: References to customers and technicians
+3. **Status enum**: Only 3 states (simple state machine)
+4. **RESTRICT on deletes**: Cannot delete customer/tech with active jobs
+5. **Nullable actual times**: Only populated when job starts/ends
+6. **CHECK constraints**: Database-level validation (defense in depth)
+7. **customer_signature**: Prepared for future PDF generation
+
+**UUID Benefits for job cards:**
+
+- Job URLs cannot be guessed: `/jobs/a1b2c3d4-...` vs `/jobs/42`
+- Prevents competitors from estimating business volume
+- Secure bookmarkable URLs
+
+**Index Strategy:**
+
+- UUIDs use B-tree indexes (same as integers)
+- Slightly larger (16 bytes vs 4 bytes) but still very fast
+- PostgreSQL optimizes UUID comparisons efficiently
 
 #### 3.2.4 Job Status History Table
 
 ```sql
 CREATE TABLE job_status_history (
-  id SERIAL PRIMARY KEY,
-  job_card_id INTEGER NOT NULL REFERENCES job_cards(id) ON DELETE CASCADE,
-  status VARCHAR(20) NOT NULL 
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  job_card_id UUID NOT NULL REFERENCES job_cards(id) ON DELETE CASCADE,
+  status VARCHAR(20) NOT NULL
     CHECK (status IN ('pending', 'in_progress', 'completed')),
-  changed_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  changed_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   notes TEXT
 );
@@ -405,9 +442,17 @@ CREATE INDEX idx_status_history_changed_at ON job_status_history(changed_at);
 
 **Key Design Decisions:**
 
-1. **CASCADE on job card delete**: History is meaningless without parent job
-2. **changed_by_user_id**: Audit trail (who changed it?)
-3. **Immutable**: No UPDATE/DELETE operations (append-only log)
+1. **UUID primary key**: Unique history entry identification
+2. **UUID foreign keys**: References to job cards and users
+3. **CASCADE on job card delete**: History is meaningless without parent job
+4. **changed_by_user_id**: Audit trail (who changed it?)
+5. **Immutable**: No UPDATE/DELETE operations (append-only log)
+
+**Audit Trail Integrity:**
+
+- UUID ensures each history entry is globally unique
+- Cannot forge or predict history entry IDs
+- Suitable for compliance and forensic analysis
 
 ### 3.3 Database Triggers (Automation)
 
@@ -422,19 +467,19 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_users_updated_at 
+CREATE TRIGGER update_users_updated_at
   BEFORE UPDATE ON users
-  FOR EACH ROW 
+  FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_customers_updated_at 
+CREATE TRIGGER update_customers_updated_at
   BEFORE UPDATE ON customers
-  FOR EACH ROW 
+  FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_job_cards_updated_at 
+CREATE TRIGGER update_job_cards_updated_at
   BEFORE UPDATE ON job_cards
-  FOR EACH ROW 
+  FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 ```
 
@@ -444,13 +489,18 @@ CREATE TRIGGER update_job_cards_updated_at
 - **Consistent**: All updates use same timestamp logic
 - **Database-level**: Works even with direct SQL updates
 
+**UUID Compatibility:**
+
+- Triggers work identically with UUID or SERIAL IDs
+- No modifications needed for UUID migration
+
 #### 3.3.2 Auto-Log Status Changes
 
 ```sql
 CREATE OR REPLACE FUNCTION log_job_status_change()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF (TG_OP = 'UPDATE' AND OLD.status != NEW.status) THEN
+  IF (TG_OP = 'UPDATE' AND OLD.status IS DISTINCT FROM NEW.status) THEN
     INSERT INTO job_status_history (job_card_id, status, changed_by_user_id)
     VALUES (NEW.id, NEW.status, NEW.technician_id);
   END IF;
@@ -458,9 +508,9 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER log_status_change 
+CREATE TRIGGER log_status_change
   AFTER UPDATE ON job_cards
-  FOR EACH ROW 
+  FOR EACH ROW
   EXECUTE FUNCTION log_job_status_change();
 ```
 
@@ -472,22 +522,241 @@ This trigger creates an **audit trail automatically**. Every status change is lo
 - Direct database updates → still logged
 - Provides forensic data for debugging
 
+**UUID Enhancement:**
+
+- History entries have UUID primary keys (globally unique)
+- Job card IDs and user IDs are UUIDs (secure references)
+- Audit trail cannot be forged or predicted
+- Works across distributed systems (future multi-region deployment)
+
+**Trigger Note:**
+
+- Uses `IS DISTINCT FROM` instead of `!=` to handle NULL values correctly
+- Works identically with UUID foreign keys
+- No changes needed for UUID migration
+
+### 3.4 UUID vs SERIAL Comparison
+
+#### Storage & Performance
+
+| Aspect          | SERIAL (INTEGER)  | UUID                    |
+| --------------- | ----------------- | ----------------------- |
+| **Storage**     | 4 bytes           | 16 bytes                |
+| **Index Size**  | Smaller           | Larger (4x)             |
+| **Sequential**  | Yes (1, 2, 3...)  | No (random)             |
+| **Generation**  | Database          | Database or Application |
+| **Uniqueness**  | Per table         | Global                  |
+| **Performance** | Marginally faster | Still very fast         |
+
+**Performance Note:** For typical workloads (<100k records), UUID performance is indistinguishable from SERIAL. PostgreSQL optimizes UUID B-tree indexes efficiently.
+
+#### Security Comparison
+
+| Attack Vector                     | SERIAL                               | UUID                              |
+| --------------------------------- | ------------------------------------ | --------------------------------- |
+| **Enumeration**                   | ✗ Easy (`/jobs/1`, `/jobs/2`...)     | ✓ Impossible (2^128 combinations) |
+| **ID Prediction**                 | ✗ Trivial (next ID = current + 1)    | ✓ Cryptographically random        |
+| **Business Intelligence Leakage** | ✗ Yes (ID reveals record count)      | ✓ No (opaque identifiers)         |
+| **URL Guessing**                  | ✗ Attackers can access all resources | ✓ Cannot guess valid URLs         |
+
+**Security Example:**
+
+```
+SERIAL URLs (Insecure):
+- /api/v1/job-cards/1    ← First job ever created
+- /api/v1/job-cards/42   ← Only 42 jobs exist
+- /api/v1/job-cards/43   ← Attacker can try this
+
+UUID URLs (Secure):
+- /api/v1/job-cards/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+- Cannot guess next valid ID
+- Cannot determine business volume
+- Cannot enumerate resources
+```
+
+#### Scalability Comparison
+
+**SERIAL Limitations:**
+
+```
+Region A (Nairobi):     Region B (Mombasa):
+Job ID 1, 2, 3...       Job ID 1, 2, 3...  ← Conflict!
+
+Later merge databases → ID conflicts require resolution
+```
+
+**UUID Benefits:**
+
+```
+Region A (Nairobi):     Region B (Mombasa):
+uuid-a1b2c3d4...        uuid-f9e8d7c6...   ← No conflict!
+
+Later merge databases → No conflicts, works seamlessly
+```
+
+### 3.5 Complete Database Schema (UUID Version)
+
+```sql
+-- Enable UUID extension (PostgreSQL specific)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Users table
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL CHECK (role IN ('technician', 'supervisor')),
+  phone VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Customers table
+CREATE TABLE customers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(200) NOT NULL,
+  address TEXT NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(255),
+  contact_person VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Job cards table
+CREATE TABLE job_cards (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  technician_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'in_progress', 'completed')),
+  priority VARCHAR(20) NOT NULL DEFAULT 'medium'
+    CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+  scheduled_date TIMESTAMP NOT NULL,
+  estimated_duration INTEGER,
+  actual_start_time TIMESTAMP,
+  actual_end_time TIMESTAMP,
+  work_performed TEXT,
+  notes TEXT,
+  customer_signature TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP,
+  CONSTRAINT valid_technician_role CHECK (
+    (SELECT role FROM users WHERE id = technician_id) = 'technician'
+  ),
+  CONSTRAINT valid_times CHECK (
+    actual_end_time IS NULL OR actual_start_time IS NULL
+    OR actual_end_time >= actual_start_time
+  )
+);
+
+-- Job status history table
+CREATE TABLE job_status_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  job_card_id UUID NOT NULL REFERENCES job_cards(id) ON DELETE CASCADE,
+  status VARCHAR(20) NOT NULL
+    CHECK (status IN ('pending', 'in_progress', 'completed')),
+  changed_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  notes TEXT
+);
+
+-- Indexes for performance
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_customers_name ON customers(name);
+CREATE INDEX idx_customers_phone ON customers(phone);
+CREATE INDEX idx_job_cards_status ON job_cards(status);
+CREATE INDEX idx_job_cards_technician ON job_cards(technician_id);
+CREATE INDEX idx_job_cards_customer ON job_cards(customer_id);
+CREATE INDEX idx_job_cards_scheduled_date ON job_cards(scheduled_date);
+CREATE INDEX idx_job_cards_created_at ON job_cards(created_at);
+CREATE INDEX idx_status_history_job_card ON job_status_history(job_card_id);
+CREATE INDEX idx_status_history_changed_at ON job_status_history(changed_at);
+
+-- Timestamp update trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Timestamp triggers
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_customers_updated_at
+  BEFORE UPDATE ON customers
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_job_cards_updated_at
+  BEFORE UPDATE ON job_cards
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Status change logging trigger function
+CREATE OR REPLACE FUNCTION log_job_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (TG_OP = 'UPDATE' AND OLD.status IS DISTINCT FROM NEW.status) THEN
+    INSERT INTO job_status_history (job_card_id, status, changed_by_user_id)
+    VALUES (NEW.id, NEW.status, NEW.technician_id);
+  END IF;
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Status change trigger
+CREATE TRIGGER log_status_change
+  AFTER UPDATE ON job_cards
+  FOR EACH ROW
+  EXECUTE FUNCTION log_job_status_change();
+```
+
+**Schema Verification:**
+
+```sql
+-- Verify UUID extension is enabled
+SELECT * FROM pg_extension WHERE extname = 'uuid-ossp';
+
+-- Check data types of all ID columns
+SELECT
+  table_name,
+  column_name,
+  data_type
+FROM information_schema.columns
+WHERE table_name IN ('users', 'customers', 'job_cards', 'job_status_history')
+  AND column_name = 'id'
+ORDER BY table_name;
+
+-- Expected result: All 'id' columns should show data_type = 'uuid'
+```
+
 ### 3.4 Connection Pooling
 
 ```javascript
 // config/database.js
-const { Pool } = require('pg');
+const { Pool } = require("pg");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20,                    // Max 20 concurrent connections
-  idleTimeoutMillis: 30000,   // Close idle connections after 30s
+  max: 20, // Max 20 concurrent connections
+  idleTimeoutMillis: 30000, // Close idle connections after 30s
   connectionTimeoutMillis: 2000, // Fail fast if can't connect
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected database error:', err);
-  process.exit(-1);  // Crash to trigger restart (fail-fast)
+pool.on("error", (err) => {
+  console.error("Unexpected database error:", err);
+  process.exit(-1); // Crash to trigger restart (fail-fast)
 });
 
 module.exports = pool;
@@ -549,7 +818,7 @@ module.exports = pool;
 
 ```javascript
 // utils/authHelpers.js
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 
 const hashPassword = async (password) => {
   const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 10;
@@ -582,7 +851,7 @@ const jwt = require('jsonwebtoken');
 const generateToken = (payload) => {
   const secret = process.env.JWT_SECRET;
   const expiresIn = process.env.JWT_EXPIRY || '24h';
-  
+
   return jwt.sign(payload, secret, { expiresIn });
 };
 
@@ -612,62 +881,61 @@ const generateToken = (payload) => {
 
 ```javascript
 // middleware/authenticate.js
-const { verifyToken } = require('../utils/authHelpers');
+const { verifyToken } = require("../utils/authHelpers");
 
 const authenticate = async (req, res, next) => {
   try {
     // Extract token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       return res.status(401).json({
         success: false,
-        error: 'No authorization token provided'
+        error: "No authorization token provided",
       });
     }
-    
+
     // Check "Bearer <token>" format
-    if (!authHeader.startsWith('Bearer ')) {
+    if (!authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid authorization format'
+        error: "Invalid authorization format",
       });
     }
-    
+
     const token = authHeader.substring(7); // Remove "Bearer "
-    
+
     // Verify and decode token
     const decoded = verifyToken(token);
-    
+
     // Attach user info to request object
     req.user = {
       userId: decoded.userId,
       email: decoded.email,
-      role: decoded.role
+      role: decoded.role,
     };
-    
+
     next(); // Continue to next middleware
-    
   } catch (error) {
     // Handle specific JWT errors
-    if (error.name === 'TokenExpiredError') {
+    if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
-        error: 'Token expired',
-        message: 'Please login again'
+        error: "Token expired",
+        message: "Please login again",
       });
     }
-    
-    if (error.name === 'JsonWebTokenError') {
+
+    if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token'
+        error: "Invalid token",
       });
     }
-    
+
     return res.status(401).json({
       success: false,
-      error: 'Authentication failed'
+      error: "Authentication failed",
     });
   }
 };
@@ -689,28 +957,29 @@ const authorize = (allowedRoles) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        error: 'Authentication required'
+        error: "Authentication required",
       });
     }
-    
+
     // Check if user's role is allowed
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        error: 'Insufficient permissions',
-        message: `Requires role: ${allowedRoles.join(' or ')}`
+        error: "Insufficient permissions",
+        message: `Requires role: ${allowedRoles.join(" or ")}`,
       });
     }
-    
+
     next(); // User has required role
   };
 };
 
 // Usage example
-router.post('/job-cards',
-  authenticate,                    // Step 1: Verify token
-  authorize(['supervisor']),       // Step 2: Check role
-  createJobCard                    // Step 3: Process request
+router.post(
+  "/job-cards",
+  authenticate, // Step 1: Verify token
+  authorize(["supervisor"]), // Step 2: Check role
+  createJobCard, // Step 3: Process request
 );
 ```
 
@@ -725,43 +994,42 @@ router.post('/job-cards',
 // middleware/jobCardAuth.js
 const verifyJobCardOwnership = async (req, res, next) => {
   try {
-    const jobCardId = parseInt(req.params.id);
+    const jobCardId = req.params.id;
     const { userId, role } = req.user;
-    
+
     // Supervisors bypass ownership check
-    if (role === 'supervisor') {
+    if (role === "supervisor") {
       return next();
     }
-    
+
     // Technicians: verify they own this job
     const result = await pool.query(
-      'SELECT technician_id FROM job_cards WHERE id = $1',
-      [jobCardId]
+      "SELECT technician_id FROM job_cards WHERE id = $1",
+      [jobCardId],
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Job card not found'
+        error: "Job card not found",
       });
     }
-    
+
     const jobTechnicianId = result.rows[0].technician_id;
-    
+
     if (jobTechnicianId !== userId) {
       return res.status(403).json({
         success: false,
-        error: 'You can only access your own assigned job cards'
+        error: "You can only access your own assigned job cards",
       });
     }
-    
+
     next(); // Ownership verified
-    
   } catch (error) {
-    console.error('Ownership verification error:', error);
+    console.error("Ownership verification error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to verify job card ownership'
+      error: "Failed to verify job card ownership",
     });
   }
 };
@@ -775,20 +1043,20 @@ const verifyJobCardOwnership = async (req, res, next) => {
 
 ### 4.7 Role-Based Access Control Matrix
 
-| Endpoint | Technician | Supervisor |
-|----------|-----------|-----------|
-| `POST /auth/login` | ✅ | ✅ |
-| `POST /auth/register` | ✅ | ✅ |
-| `GET /job-cards` | ✅ (own jobs only) | ✅ (all jobs) |
-| `GET /job-cards/:id` | ✅ (if assigned) | ✅ |
-| `POST /job-cards` | ❌ | ✅ |
-| `PATCH /job-cards/:id` | ✅ (own jobs, work details only) | ✅ |
-| `POST /job-cards/:id/complete` | ✅ (if assigned) | ✅ |
-| `DELETE /job-cards/:id` | ❌ | ✅ (pending only) |
-| `GET /customers` | ✅ (read-only) | ✅ |
-| `POST /customers` | ❌ | ✅ |
-| `GET /users` | ❌ | ✅ |
-| `DELETE /users/:id` | ❌ | ✅ |
+| Endpoint                       | Technician                       | Supervisor        |
+| ------------------------------ | -------------------------------- | ----------------- |
+| `POST /auth/login`             | ✅                               | ✅                |
+| `POST /auth/register`          | ✅                               | ✅                |
+| `GET /job-cards`               | ✅ (own jobs only)               | ✅ (all jobs)     |
+| `GET /job-cards/:id`           | ✅ (if assigned)                 | ✅                |
+| `POST /job-cards`              | ❌                               | ✅                |
+| `PATCH /job-cards/:id`         | ✅ (own jobs, work details only) | ✅                |
+| `POST /job-cards/:id/complete` | ✅ (if assigned)                 | ✅                |
+| `DELETE /job-cards/:id`        | ❌                               | ✅ (pending only) |
+| `GET /customers`               | ✅ (read-only)                   | ✅                |
+| `POST /customers`              | ❌                               | ✅                |
+| `GET /users`                   | ❌                               | ✅                |
+| `DELETE /users/:id`            | ❌                               | ✅                |
 
 ---
 
@@ -842,71 +1110,81 @@ The API follows REST conventions:
 
 ```javascript
 // routes/jobCard.routes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const jobCardController = require('../controllers/jobCard.controller');
-const authenticate = require('../middleware/authenticate');
-const authorize = require('../middleware/authorize');
-const validateRequest = require('../middleware/validateRequest');
-const { verifyJobCardOwnership, filterJobCardsByRole } = require('../middleware/jobCardAuth');
+const jobCardController = require("../controllers/jobCard.controller");
+const authenticate = require("../middleware/authenticate");
+const authorize = require("../middleware/authorize");
+const validateRequest = require("../middleware/validateRequest");
+const {
+  verifyJobCardOwnership,
+  filterJobCardsByRole,
+} = require("../middleware/jobCardAuth");
 const {
   createJobCardSchema,
   updateJobCardSchema,
   completeJobCardSchema,
-  getJobCardsQuerySchema
-} = require('../validators/jobCard.validator');
+  getJobCardsQuerySchema,
+} = require("../validators/jobCard.validator");
 
 // Statistics (supervisor only)
-router.get('/stats',
+router.get(
+  "/stats",
   authenticate,
-  authorize(['supervisor']),
-  jobCardController.getJobCardStatistics
+  authorize(["supervisor"]),
+  jobCardController.getJobCardStatistics,
 );
 
 // List all job cards
-router.get('/',
+router.get(
+  "/",
   authenticate,
-  filterJobCardsByRole,  // Auto-filter for technicians
+  filterJobCardsByRole, // Auto-filter for technicians
   validateRequest(getJobCardsQuerySchema),
-  jobCardController.getAllJobCards
+  jobCardController.getAllJobCards,
 );
 
 // Get single job card
-router.get('/:id',
+router.get(
+  "/:id",
   authenticate,
-  verifyJobCardOwnership,  // Check ownership
-  jobCardController.getJobCardById
+  verifyJobCardOwnership, // Check ownership
+  jobCardController.getJobCardById,
 );
 
 // Create new job card
-router.post('/',
+router.post(
+  "/",
   authenticate,
-  authorize(['supervisor']),
+  authorize(["supervisor"]),
   validateRequest(createJobCardSchema),
-  jobCardController.createJobCard
+  jobCardController.createJobCard,
 );
 
 // Update job card
-router.patch('/:id',
+router.patch(
+  "/:id",
   authenticate,
   verifyJobCardOwnership,
   validateRequest(updateJobCardSchema),
-  jobCardController.updateJobCard
+  jobCardController.updateJobCard,
 );
 
 // Complete job card
-router.post('/:id/complete',
+router.post(
+  "/:id/complete",
   authenticate,
   verifyJobCardOwnership,
   validateRequest(completeJobCardSchema),
-  jobCardController.completeJobCard
+  jobCardController.completeJobCard,
 );
 
 // Delete job card
-router.delete('/:id',
+router.delete(
+  "/:id",
   authenticate,
-  authorize(['supervisor']),
-  jobCardController.deleteJobCard
+  authorize(["supervisor"]),
+  jobCardController.deleteJobCard,
 );
 
 module.exports = router;
@@ -927,14 +1205,14 @@ module.exports = router;
 // Service layer handles filtering
 const getAllJobCards = async (filters = {}) => {
   const {
-    status,           // 'pending', 'in_progress', 'completed', or array
-    technician_id,    // Filter by technician
-    customer_id,      // Filter by customer
-    start_date,       // Date range start
-    end_date,         // Date range end
-    search,           // Search in title/description
-    page = 1,         // Pagination
-    limit = 20
+    status, // 'pending', 'in_progress', 'completed', or array
+    technician_id, // Filter by technician
+    customer_id, // Filter by customer
+    start_date, // Date range start
+    end_date, // Date range end
+    search, // Search in title/description
+    page = 1, // Pagination
+    limit = 20,
   } = filters;
 
   let query = `SELECT ... FROM job_cards ...`;
@@ -946,7 +1224,9 @@ const getAllJobCards = async (filters = {}) => {
   if (status) {
     if (Array.isArray(status)) {
       // Multiple statuses: status IN ('pending', 'in_progress')
-      const placeholders = status.map((_, i) => `$${paramCounter + i}`).join(', ');
+      const placeholders = status
+        .map((_, i) => `$${paramCounter + i}`)
+        .join(", ");
       conditions.push(`jc.status IN (${placeholders})`);
       params.push(...status);
       paramCounter += status.length;
@@ -961,7 +1241,7 @@ const getAllJobCards = async (filters = {}) => {
   // ... more filters
 
   if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
+    query += " WHERE " + conditions.join(" AND ");
   }
 
   // Add pagination
@@ -1053,16 +1333,16 @@ const createJobCard = async (jobCardData) => {
     technician_id,
     title,
     description,
-    priority = 'medium',
+    priority = "medium",
     scheduled_date,
     estimated_duration,
-    notes
+    notes,
   } = jobCardData;
 
   // VALIDATION 1: Verify customer exists
   const customerCheck = await pool.query(
-    'SELECT id FROM customers WHERE id = $1',
-    [customer_id]
+    "SELECT id FROM customers WHERE id = $1",
+    [customer_id],
   );
 
   if (customerCheck.rows.length === 0) {
@@ -1073,8 +1353,8 @@ const createJobCard = async (jobCardData) => {
 
   // VALIDATION 2: Verify technician exists AND has correct role
   const technicianCheck = await pool.query(
-    'SELECT id, role FROM users WHERE id = $1',
-    [technician_id]
+    "SELECT id, role FROM users WHERE id = $1",
+    [technician_id],
   );
 
   if (technicianCheck.rows.length === 0) {
@@ -1083,9 +1363,9 @@ const createJobCard = async (jobCardData) => {
     throw error;
   }
 
-  if (technicianCheck.rows[0].role !== 'technician') {
+  if (technicianCheck.rows[0].role !== "technician") {
     const error = new Error(
-      `User with ID ${technician_id} is not a technician (role: ${technicianCheck.rows[0].role})`
+      `User with ID ${technician_id} is not a technician (role: ${technicianCheck.rows[0].role})`,
     );
     error.statusCode = 400;
     throw error;
@@ -1101,8 +1381,14 @@ const createJobCard = async (jobCardData) => {
   `;
 
   const values = [
-    customer_id, technician_id, title, description || null,
-    priority, scheduled_date, estimated_duration || null, notes || null
+    customer_id,
+    technician_id,
+    title,
+    description || null,
+    priority,
+    scheduled_date,
+    estimated_duration || null,
+    notes || null,
   ];
 
   const result = await pool.query(query, values);
@@ -1125,12 +1411,12 @@ const createJobCard = async (jobCardData) => {
 const updateJobCard = async (jobCardId, updateData) => {
   // STEP 1: Fetch current job state
   const currentJobResult = await pool.query(
-    'SELECT status, actual_start_time FROM job_cards WHERE id = $1',
-    [jobCardId]
+    "SELECT status, actual_start_time FROM job_cards WHERE id = $1",
+    [jobCardId],
   );
 
   if (currentJobResult.rows.length === 0) {
-    const error = new Error('Job card not found');
+    const error = new Error("Job card not found");
     error.statusCode = 404;
     throw error;
   }
@@ -1139,9 +1425,9 @@ const updateJobCard = async (jobCardId, updateData) => {
   const currentStatus = currentJob.status;
 
   // VALIDATION 1: Prevent modification of completed jobs
-  if (currentStatus === 'completed') {
+  if (currentStatus === "completed") {
     const error = new Error(
-      'Cannot modify completed job cards. Completed jobs are immutable for data integrity.'
+      "Cannot modify completed job cards. Completed jobs are immutable for data integrity.",
     );
     error.statusCode = 403; // Forbidden
     throw error;
@@ -1150,22 +1436,22 @@ const updateJobCard = async (jobCardId, updateData) => {
   // VALIDATION 2: Status transition logic
   if (updateData.status && updateData.status !== currentStatus) {
     const invalidTransitions = {
-      'in_progress': ['pending'],  // Can't go back to pending
-      'completed': []              // Can't change from completed
+      in_progress: ["pending"], // Can't go back to pending
+      completed: [], // Can't change from completed
     };
 
     if (invalidTransitions[currentStatus]?.includes(updateData.status)) {
       const error = new Error(
-        `Invalid status transition: Cannot change from '${currentStatus}' to '${updateData.status}'`
+        `Invalid status transition: Cannot change from '${currentStatus}' to '${updateData.status}'`,
       );
       error.statusCode = 400;
       throw error;
     }
 
     // Actual start time required when starting a job
-    if (updateData.status === 'in_progress' && !updateData.actual_start_time) {
+    if (updateData.status === "in_progress" && !updateData.actual_start_time) {
       const error = new Error(
-        'actual_start_time is required when changing status to in_progress'
+        "actual_start_time is required when changing status to in_progress",
       );
       error.statusCode = 400;
       throw error;
@@ -1178,7 +1464,9 @@ const updateJobCard = async (jobCardId, updateData) => {
     const endTime = new Date(updateData.actual_end_time);
 
     if (endTime < startTime) {
-      const error = new Error('actual_end_time cannot be before actual_start_time');
+      const error = new Error(
+        "actual_end_time cannot be before actual_start_time",
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -1186,10 +1474,16 @@ const updateJobCard = async (jobCardId, updateData) => {
 
   // BUILD UPDATE QUERY DYNAMICALLY
   const allowedFields = [
-    'title', 'description', 'status', 'priority',
-    'scheduled_date', 'estimated_duration',
-    'actual_start_time', 'actual_end_time',
-    'work_performed', 'notes'
+    "title",
+    "description",
+    "status",
+    "priority",
+    "scheduled_date",
+    "estimated_duration",
+    "actual_start_time",
+    "actual_end_time",
+    "work_performed",
+    "notes",
   ];
 
   const updates = [];
@@ -1213,7 +1507,7 @@ const updateJobCard = async (jobCardId, updateData) => {
 
   const query = `
     UPDATE job_cards 
-    SET ${updates.join(', ')}
+    SET ${updates.join(", ")}
     WHERE id = $${paramCounter}
     RETURNING id
   `;
@@ -1249,6 +1543,7 @@ const updateJobCard = async (jobCardId, updateData) => {
 ```
 
 **Invalid Transitions:**
+
 - `in_progress` → `pending` ❌ (can't un-start a job)
 - `completed` → `*` ❌ (completed jobs are read-only)
 
@@ -1264,12 +1559,12 @@ const updateJobCard = async (jobCardId, updateData) => {
 const completeJobCard = async (jobCardId, completionData) => {
   // Fetch current job status
   const currentJobResult = await pool.query(
-    'SELECT status, actual_start_time FROM job_cards WHERE id = $1',
-    [jobCardId]
+    "SELECT status, actual_start_time FROM job_cards WHERE id = $1",
+    [jobCardId],
   );
 
   if (currentJobResult.rows.length === 0) {
-    const error = new Error('Job card not found');
+    const error = new Error("Job card not found");
     error.statusCode = 404;
     throw error;
   }
@@ -1277,16 +1572,16 @@ const completeJobCard = async (jobCardId, completionData) => {
   const currentJob = currentJobResult.rows[0];
 
   // VALIDATION 1: Check if already completed
-  if (currentJob.status === 'completed') {
-    const error = new Error('Job card is already completed');
+  if (currentJob.status === "completed") {
+    const error = new Error("Job card is already completed");
     error.statusCode = 400;
     throw error;
   }
 
   // VALIDATION 2: Check if job was started first
-  if (currentJob.status === 'pending') {
+  if (currentJob.status === "pending") {
     const error = new Error(
-      'Job must be started before it can be completed. Please start the job first.'
+      "Job must be started before it can be completed. Please start the job first.",
     );
     error.statusCode = 400;
     throw error;
@@ -1294,38 +1589,42 @@ const completeJobCard = async (jobCardId, completionData) => {
 
   // VALIDATION 3: Required fields for completion
   if (!completionData.work_performed) {
-    const error = new Error('work_performed is required to complete a job');
+    const error = new Error("work_performed is required to complete a job");
     error.statusCode = 400;
     throw error;
   }
 
   if (completionData.work_performed.length < 10) {
-    const error = new Error('work_performed must be at least 10 characters long');
+    const error = new Error(
+      "work_performed must be at least 10 characters long",
+    );
     error.statusCode = 400;
     throw error;
   }
 
   // VALIDATION 4: Time logic
-  const startTime = completionData.actual_start_time 
+  const startTime = completionData.actual_start_time
     ? new Date(completionData.actual_start_time)
-    : currentJob.actual_start_time 
+    : currentJob.actual_start_time
       ? new Date(currentJob.actual_start_time)
       : null;
 
-  const endTime = completionData.actual_end_time 
+  const endTime = completionData.actual_end_time
     ? new Date(completionData.actual_end_time)
     : new Date(); // Default to current time
 
   if (!startTime) {
     const error = new Error(
-      'Job must have actual_start_time before completion'
+      "Job must have actual_start_time before completion",
     );
     error.statusCode = 400;
     throw error;
   }
 
   if (endTime < startTime) {
-    const error = new Error('actual_end_time cannot be before actual_start_time');
+    const error = new Error(
+      "actual_end_time cannot be before actual_start_time",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -1351,7 +1650,7 @@ const completeJobCard = async (jobCardId, completionData) => {
     completionData.work_performed,
     completionData.customer_signature || null,
     completionData.notes || null,
-    jobCardId
+    jobCardId,
   ];
 
   await pool.query(query, values);
@@ -1375,12 +1674,12 @@ const completeJobCard = async (jobCardId, completionData) => {
 const deleteJobCard = async (jobCardId) => {
   // Check if job card exists and get its status
   const jobCheck = await pool.query(
-    'SELECT id, status FROM job_cards WHERE id = $1',
-    [jobCardId]
+    "SELECT id, status FROM job_cards WHERE id = $1",
+    [jobCardId],
   );
 
   if (jobCheck.rows.length === 0) {
-    const error = new Error('Job card not found');
+    const error = new Error("Job card not found");
     error.statusCode = 404;
     throw error;
   }
@@ -1388,9 +1687,9 @@ const deleteJobCard = async (jobCardId) => {
   const jobStatus = jobCheck.rows[0].status;
 
   // VALIDATION: Only pending jobs can be deleted
-  if (jobStatus !== 'pending') {
+  if (jobStatus !== "pending") {
     const error = new Error(
-      `Cannot delete job card with status '${jobStatus}'. Only pending jobs can be deleted.`
+      `Cannot delete job card with status '${jobStatus}'. Only pending jobs can be deleted.`,
     );
     error.statusCode = 403; // Forbidden
     throw error;
@@ -1398,11 +1697,11 @@ const deleteJobCard = async (jobCardId) => {
 
   // DELETE JOB CARD
   // CASCADE on job_status_history will auto-delete history records
-  await pool.query('DELETE FROM job_cards WHERE id = $1', [jobCardId]);
+  await pool.query("DELETE FROM job_cards WHERE id = $1", [jobCardId]);
 
-  return { 
-    message: 'Job card deleted successfully',
-    deletedId: jobCardId 
+  return {
+    message: "Job card deleted successfully",
+    deletedId: jobCardId,
   };
 };
 ```
@@ -1490,14 +1789,14 @@ const getJobCardStatistics = async () => {
     todayJobs,
     weekCompleted,
     avgCompletionTime,
-    recentActivity
+    recentActivity,
   ] = await Promise.all([
     pool.query(overallStatsQuery),
     pool.query(priorityStatsQuery),
     pool.query(todayJobsQuery),
     pool.query(weekCompletedQuery),
     pool.query(avgCompletionTimeQuery),
-    pool.query(recentActivityQuery)
+    pool.query(recentActivityQuery),
   ]);
 
   // Format and return
@@ -1506,17 +1805,18 @@ const getJobCardStatistics = async () => {
     pending_jobs: parseInt(overallStats.rows[0].pending_count),
     in_progress_jobs: parseInt(overallStats.rows[0].in_progress_count),
     completed_jobs: parseInt(overallStats.rows[0].completed_count),
-    
+
     urgent_count: parseInt(priorityStats.rows[0].urgent_count),
     high_count: parseInt(priorityStats.rows[0].high_count),
     medium_count: parseInt(priorityStats.rows[0].medium_count),
     low_count: parseInt(priorityStats.rows[0].low_count),
-    
+
     today_scheduled: parseInt(todayJobs.rows[0].today_scheduled),
     week_completed: parseInt(weekCompleted.rows[0].week_completed),
-    avg_completion_hours: parseFloat(avgCompletionTime.rows[0].avg_completion_hours) || 0,
-    
-    recent_activity: recentActivity.rows
+    avg_completion_hours:
+      parseFloat(avgCompletionTime.rows[0].avg_completion_hours) || 0,
+
+    recent_activity: recentActivity.rows,
   };
 };
 ```
@@ -1564,70 +1864,65 @@ Validation occurs at **3 layers**:
 
 ```javascript
 // validators/jobCard.validator.js
-const Joi = require('joi');
+const Joi = require("joi");
 
 const createJobCardSchema = Joi.object({
-  customer_id: Joi.number()
+  customer_id: Joi.string()
+    .uuid()
+    .required()
     .integer()
     .positive()
     .required()
     .messages({
-      'number.base': 'customer_id must be a number',
-      'number.positive': 'customer_id must be positive',
-      'any.required': 'customer_id is required'
+      "number.base": "customer_id must be a number",
+      "number.positive": "customer_id must be positive",
+      "any.required": "customer_id is required",
     }),
 
-  technician_id: Joi.number()
+  technician_id: Joi.string()
+    .uuid()
+    .required()
     .integer()
     .positive()
     .required()
     .messages({
-      'number.base': 'technician_id must be a number',
-      'number.positive': 'technician_id must be positive',
-      'any.required': 'technician_id is required'
+      "number.base": "technician_id must be a number",
+      "number.positive": "technician_id must be positive",
+      "any.required": "technician_id is required",
     }),
 
-  title: Joi.string()
-    .min(3)
-    .max(200)
-    .required()
-    .messages({
-      'string.empty': 'title is required',
-      'string.min': 'title must be at least 3 characters',
-      'string.max': 'title cannot exceed 200 characters'
-    }),
+  title: Joi.string().min(3).max(200).required().messages({
+    "string.empty": "title is required",
+    "string.min": "title must be at least 3 characters",
+    "string.max": "title cannot exceed 200 characters",
+  }),
 
-  description: Joi.string()
-    .max(2000)
-    .allow('', null),
+  description: Joi.string().max(2000).allow("", null),
 
   priority: Joi.string()
-    .valid('low', 'medium', 'high', 'urgent')
-    .default('medium')
+    .valid("low", "medium", "high", "urgent")
+    .default("medium")
     .messages({
-      'any.only': 'priority must be one of: low, medium, high, urgent'
+      "any.only": "priority must be one of: low, medium, high, urgent",
     }),
 
-  scheduled_date: Joi.string()
-    .isoDate()
+  scheduled_date: Joi.string().isoDate().required().messages({
+    "string.isoDate": "scheduled_date must be a valid ISO 8601 date",
+    "any.required": "scheduled_date is required",
+  }),
+
+  estimated_duration: Joi.string()
+    .uuid()
     .required()
-    .messages({
-      'string.isoDate': 'scheduled_date must be a valid ISO 8601 date',
-      'any.required': 'scheduled_date is required'
-    }),
-
-  estimated_duration: Joi.number()
     .integer()
     .positive()
     .max(1440) // Max 24 hours in minutes
     .allow(null)
     .messages({
-      'number.max': 'estimated_duration cannot exceed 1440 minutes (24 hours)'
+      "number.max": "estimated_duration cannot exceed 1440 minutes (24 hours)",
     }),
 
-  notes: Joi.string()
-    .max(1000)
-    .allow('', null)
+  notes: Joi.string().max(1000).allow("", null),
 });
 ```
 
@@ -1638,23 +1933,23 @@ const createJobCardSchema = Joi.object({
 const validateRequest = (schema) => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.body, {
-      abortEarly: false,  // Return ALL errors, not just first
-      stripUnknown: true  // Remove fields not in schema
+      abortEarly: false, // Return ALL errors, not just first
+      stripUnknown: true, // Remove fields not in schema
     });
-    
+
     if (error) {
-      const errors = error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
+      const errors = error.details.map((detail) => ({
+        field: detail.path.join("."),
+        message: detail.message,
       }));
-      
+
       return res.status(400).json({
         success: false,
-        error: 'Validation failed',
-        details: errors
+        error: "Validation failed",
+        details: errors,
       });
     }
-    
+
     // Replace req.body with validated and sanitized value
     req.body = value;
     next();
@@ -1686,12 +1981,12 @@ const validateRequest = (schema) => {
 ```javascript
 // Global error handler (last middleware in server.js)
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  
+  console.error("Unhandled error:", err);
+
   res.status(err.statusCode || 500).json({
     success: false,
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    error: err.message || "Internal server error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 ```
@@ -1706,7 +2001,7 @@ app.use((err, req, res, next) => {
 
 ```javascript
 // Service
-const error = new Error('Job card not found');
+const error = new Error("Job card not found");
 error.statusCode = 404;
 throw error;
 
@@ -1718,23 +2013,23 @@ try {
   const statusCode = error.statusCode || 500;
   res.status(statusCode).json({
     success: false,
-    error: error.message
+    error: error.message,
   });
 }
 ```
 
 ### 7.4 HTTP Status Codes Used
 
-| Code | Meaning | When Used |
-|------|---------|-----------|
-| 200 | OK | Successful GET, PATCH, DELETE |
-| 201 | Created | Successful POST (new resource created) |
-| 400 | Bad Request | Validation errors, business rule violations |
-| 401 | Unauthorized | Missing/invalid token |
-| 403 | Forbidden | Insufficient permissions, completed job modification |
-| 404 | Not Found | Resource doesn't exist |
-| 409 | Conflict | Duplicate email, invalid status transition |
-| 500 | Server Error | Database errors, unexpected exceptions |
+| Code | Meaning      | When Used                                            |
+| ---- | ------------ | ---------------------------------------------------- |
+| 200  | OK           | Successful GET, PATCH, DELETE                        |
+| 201  | Created      | Successful POST (new resource created)               |
+| 400  | Bad Request  | Validation errors, business rule violations          |
+| 401  | Unauthorized | Missing/invalid token                                |
+| 403  | Forbidden    | Insufficient permissions, completed job modification |
+| 404  | Not Found    | Resource doesn't exist                               |
+| 409  | Conflict     | Duplicate email, invalid status transition           |
+| 500  | Server Error | Database errors, unexpected exceptions               |
 
 ---
 
@@ -1749,7 +2044,7 @@ try {
 const query = `SELECT * FROM users WHERE email = '${email}'`;
 
 // ✅ SAFE (parameterized query)
-const query = 'SELECT * FROM users WHERE email = $1';
+const query = "SELECT * FROM users WHERE email = $1";
 const result = await pool.query(query, [email]);
 ```
 
@@ -1795,12 +2090,14 @@ const isValid = await bcrypt.compare(password, storedHash);
 
 ```javascript
 // server.js
-const cors = require('cors');
+const cors = require("cors");
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  }),
+);
 ```
 
 **Production config:**
@@ -1812,14 +2109,14 @@ app.use(cors({
 
 ```javascript
 // Would add:
-const rateLimit = require('express-rate-limit');
+const rateLimit = require("express-rate-limit");
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // 100 requests per window
+  max: 100, // 100 requests per window
 });
 
-app.use('/api/v1/auth', limiter);
+app.use("/api/v1/auth", limiter);
 ```
 
 ### 8.6 Input Sanitization
@@ -1828,7 +2125,7 @@ app.use('/api/v1/auth', limiter);
 
 ```javascript
 schema.validate(req.body, {
-  stripUnknown: true  // Remove fields not in schema
+  stripUnknown: true, // Remove fields not in schema
 });
 ```
 
@@ -1836,7 +2133,7 @@ schema.validate(req.body, {
 
 ```javascript
 // Client sends:
-{ 
+{
   title: "Hack",
   role: "supervisor"  // Trying to escalate privileges
 }
@@ -1851,28 +2148,30 @@ schema.validate(req.body, {
 
 ### 9.1 Why PostgreSQL over MongoDB?
 
-| Requirement | PostgreSQL | MongoDB |
-|------------|-----------|---------|
-| **Relationships** | Strong (foreign keys, joins) | Weak (manual references) |
-| **Data Integrity** | ACID transactions | Eventually consistent |
-| **Schema Validation** | Built-in constraints | Optional validation |
-| **Complex Queries** | SQL (very expressive) | Aggregation pipeline (verbose) |
+| Requirement           | PostgreSQL                   | MongoDB                        |
+| --------------------- | ---------------------------- | ------------------------------ |
+| **Relationships**     | Strong (foreign keys, joins) | Weak (manual references)       |
+| **Data Integrity**    | ACID transactions            | Eventually consistent          |
+| **Schema Validation** | Built-in constraints         | Optional validation            |
+| **Complex Queries**   | SQL (very expressive)        | Aggregation pipeline (verbose) |
 
 **Decision:** PostgreSQL because:
+
 - Job cards have **strong relationships** (customer, technician)
 - Need **ACID guarantees** (audit trail accuracy)
 - **Check constraints** enforce business rules at DB level
 
 ### 9.2 Why JWT over Sessions?
 
-| Aspect | JWT | Sessions |
-|--------|-----|----------|
-| **Server State** | Stateless | Stateful (in-memory or Redis) |
-| **Scalability** | Easy (no shared state) | Hard (session replication needed) |
-| **Performance** | No DB lookup per request | DB/cache lookup per request |
-| **Mobile-Friendly** | Yes (token in headers) | Harder (cookie management) |
+| Aspect              | JWT                      | Sessions                          |
+| ------------------- | ------------------------ | --------------------------------- |
+| **Server State**    | Stateless                | Stateful (in-memory or Redis)     |
+| **Scalability**     | Easy (no shared state)   | Hard (session replication needed) |
+| **Performance**     | No DB lookup per request | DB/cache lookup per request       |
+| **Mobile-Friendly** | Yes (token in headers)   | Harder (cookie management)        |
 
 **Decision:** JWT because:
+
 - **Horizontal scaling**: No session store bottleneck
 - **Microservices-ready**: Token can be verified by any service
 - **Mobile app future**: Easier to adapt
@@ -1885,6 +2184,7 @@ schema.validate(req.body, {
 2. **Clean Architecture**: Complex (overkill for this size)
 
 **Why Layered:**
+
 - **Separation of concerns**: HTTP logic ≠ business logic
 - **Testable**: Can mock database for service tests
 - **Maintainable**: Changes in one layer don't cascade
@@ -1898,6 +2198,7 @@ schema.validate(req.body, {
 **Solution:** Build queries dynamically based on provided filters
 
 **Trade-off:**
+
 - ✅ **Pro**: Flexible, fewer queries to maintain
 - ❌ **Con**: Slightly more complex code
 - **Verdict**: Worth it for API flexibility
@@ -1956,8 +2257,8 @@ req.user = { userId: 5, email: "john@copycat.com", role: "technician" };
 
 // jobCardAuth.js (verifyJobCardOwnership)
 const jobCheck = await pool.query(
-  'SELECT technician_id FROM job_cards WHERE id = $1',
-  [42]
+  "SELECT technician_id FROM job_cards WHERE id = $1",
+  [42],
 );
 // jobCheck.rows[0].technician_id === 5 ✅ (matches req.user.userId)
 
@@ -1973,18 +2274,18 @@ req.body = value; // Sanitized data
 // controllers/jobCard.controller.js
 const completeJobCard = async (req, res) => {
   try {
-    const jobCardId = parseInt(req.params.id); // 42
+    const jobCardId = req.params.id; // 42
     const completionData = req.body;
-    
+
     const completedJobCard = await jobCardService.completeJobCard(
-      jobCardId, 
-      completionData
+      jobCardId,
+      completionData,
     );
-    
+
     res.json({
       success: true,
-      message: 'Job card completed successfully',
-      data: { jobCard: completedJobCard }
+      message: "Job card completed successfully",
+      data: { jobCard: completedJobCard },
     });
   } catch (error) {
     // ...error handling
@@ -1999,15 +2300,15 @@ const completeJobCard = async (req, res) => {
 const completeJobCard = async (jobCardId, completionData) => {
   // Fetch current status
   const currentJob = await pool.query(
-    'SELECT status, actual_start_time FROM job_cards WHERE id = $1',
-    [42]
+    "SELECT status, actual_start_time FROM job_cards WHERE id = $1",
+    [42],
   );
   // status: 'in_progress', actual_start_time: '2026-02-16T08:00:00Z'
-  
+
   // Validate: not already completed ✅
   // Validate: not pending ✅
   // Validate: work_performed present ✅ (>= 10 chars)
-  
+
   // Update to completed
   const query = `
     UPDATE job_cards 
@@ -2019,16 +2320,16 @@ const completeJobCard = async (jobCardId, completionData) => {
       completed_at = CURRENT_TIMESTAMP
     WHERE id = $4
   `;
-  
+
   await pool.query(query, [
-    '2026-02-16T14:30:00Z',
-    'Replaced toner cartridge...',
-    'Customer reported slow printing...',
-    42
+    "2026-02-16T14:30:00Z",
+    "Replaced toner cartridge...",
+    "Customer reported slow printing...",
+    42,
   ]);
-  
+
   // Trigger fires: INSERT INTO job_status_history (...)
-  
+
   // Fetch complete job with JOINs
   return await getJobCardById(42);
 };
@@ -2041,7 +2342,7 @@ const completeJobCard = async (jobCardId, completionData) => {
 SELECT status, actual_start_time FROM job_cards WHERE id = 42;
 
 -- 2. Service updates to completed
-UPDATE job_cards SET 
+UPDATE job_cards SET
   status = 'completed',
   actual_end_time = '2026-02-16T14:30:00Z',
   work_performed = 'Replaced toner cartridge...',
@@ -2054,7 +2355,7 @@ INSERT INTO job_status_history (job_card_id, status, changed_by_user_id)
 VALUES (42, 'completed', 5);
 
 -- 4. Service fetches complete result
-SELECT 
+SELECT
   jc.*,
   c.name as customer_name, c.address, c.phone, c.email,
   u.name as technician_name, u.email as technician_email
@@ -2103,16 +2404,16 @@ WHERE jc.id = 42;
 #### server.js (Application Entry Point)
 
 ```javascript
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const pool = require('./src/config/database');
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const pool = require("./src/config/database");
 
 // Import routes
-const authRoutes = require('./src/routes/auth.routes');
-const userRoutes = require('./src/routes/user.routes');
-const customerRoutes = require('./src/routes/customer.routes');
-const jobCardRoutes = require('./src/routes/jobCard.routes');
+const authRoutes = require("./src/routes/auth.routes");
+const userRoutes = require("./src/routes/user.routes");
+const customerRoutes = require("./src/routes/customer.routes");
+const jobCardRoutes = require("./src/routes/jobCard.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -2123,27 +2424,27 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/customers', customerRoutes);
-app.use('/api/v1/job-cards', jobCardRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/customers", customerRoutes);
+app.use("/api/v1/job-cards", jobCardRoutes);
 
 // Health check
-app.get('/api/v1/health', (req, res) => {
-  res.json({ success: true, message: 'Server is running' });
+app.get("/api/v1/health", (req, res) => {
+  res.json({ success: true, message: "Server is running" });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ success: false, error: 'Route not found' });
+  res.status(404).json({ success: false, error: "Route not found" });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error("Unhandled error:", err);
   res.status(err.statusCode || 500).json({
     success: false,
-    error: err.message || 'Internal server error'
+    error: err.message || "Internal server error",
   });
 });
 
@@ -2163,7 +2464,7 @@ app.listen(PORT, () => {
 #### config/database.js (Connection Pool)
 
 ```javascript
-const { Pool } = require('pg');
+const { Pool } = require("pg");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -2173,18 +2474,18 @@ const pool = new Pool({
 });
 
 // Test connection on startup
-pool.query('SELECT NOW()', (err, res) => {
+pool.query("SELECT NOW()", (err, res) => {
   if (err) {
-    console.error('❌ Database connection failed:', err.message);
+    console.error("❌ Database connection failed:", err.message);
     process.exit(-1);
   } else {
-    console.log('✅ Database connected successfully');
+    console.log("✅ Database connected successfully");
   }
 });
 
 // Handle unexpected errors
-pool.on('error', (err) => {
-  console.error('Unexpected database error:', err);
+pool.on("error", (err) => {
+  console.error("Unexpected database error:", err);
   process.exit(-1);
 });
 
@@ -2207,21 +2508,21 @@ module.exports = pool;
 
 ```javascript
 // tests/unit/jobCard.service.test.js
-describe('JobCardService', () => {
-  describe('completeJobCard', () => {
-    it('should throw error if job is pending', async () => {
+describe("JobCardService", () => {
+  describe("completeJobCard", () => {
+    it("should throw error if job is pending", async () => {
       // Mock database to return pending job
       // Call completeJobCard
       // Expect error: "Job must be started first"
     });
-    
-    it('should require work_performed field', async () => {
+
+    it("should require work_performed field", async () => {
       // Mock in_progress job
       // Call completeJobCard without work_performed
       // Expect error: "work_performed is required"
     });
-    
-    it('should set completed_at timestamp', async () => {
+
+    it("should set completed_at timestamp", async () => {
       // Mock successful completion
       // Verify completed_at is set
     });
@@ -2233,31 +2534,31 @@ describe('JobCardService', () => {
 
 ```javascript
 // tests/integration/jobCard.routes.test.js
-const request = require('supertest');
-const app = require('../../server');
+const request = require("supertest");
+const app = require("../../server");
 
-describe('POST /api/v1/job-cards/:id/complete', () => {
-  it('should return 401 without token', async () => {
+describe("POST /api/v1/job-cards/:id/complete", () => {
+  it("should return 401 without token", async () => {
     const response = await request(app)
-      .post('/api/v1/job-cards/1/complete')
-      .send({ work_performed: 'Test work' });
-    
+      .post("/api/v1/job-cards/1/complete")
+      .send({ work_performed: "Test work" });
+
     expect(response.status).toBe(401);
   });
-  
-  it('should complete job with valid data', async () => {
-    const token = 'valid-jwt-token';
+
+  it("should complete job with valid data", async () => {
+    const token = "valid-jwt-token";
     const response = await request(app)
-      .post('/api/v1/job-cards/1/complete')
-      .set('Authorization', `Bearer ${token}`)
+      .post("/api/v1/job-cards/1/complete")
+      .set("Authorization", `Bearer ${token}`)
       .send({
-        work_performed: 'Replaced toner',
-        actual_end_time: '2026-02-16T14:00:00Z'
+        work_performed: "Replaced toner",
+        actual_end_time: "2026-02-16T14:00:00Z",
       });
-    
+
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
-    expect(response.body.data.jobCard.status).toBe('completed');
+    expect(response.body.data.jobCard.status).toBe("completed");
   });
 });
 ```
@@ -2301,12 +2602,12 @@ CORS_ORIGIN=https://jobcards.copycatgroup.com
 
 **Deployment Platforms:**
 
-| Platform | Pros | Cons |
-|----------|------|------|
-| **Railway** | Easy setup, auto-deploy from Git | Limited free tier |
-| **Render** | Free PostgreSQL database | Cold starts on free tier |
-| **Heroku** | Battle-tested, good docs | Expensive for production |
-| **DigitalOcean** | Full control, affordable | Manual setup required |
+| Platform         | Pros                             | Cons                     |
+| ---------------- | -------------------------------- | ------------------------ |
+| **Railway**      | Easy setup, auto-deploy from Git | Limited free tier        |
+| **Render**       | Free PostgreSQL database         | Cold starts on free tier |
+| **Heroku**       | Battle-tested, good docs         | Expensive for production |
+| **DigitalOcean** | Full control, affordable         | Manual setup required    |
 
 ### 11.4 Database Migration Strategy
 
@@ -2331,7 +2632,7 @@ CREATE TRIGGER log_status_change ...
 
 ```sql
 -- migrations/002_add_customer_signature.sql
-ALTER TABLE job_cards 
+ALTER TABLE job_cards
 ADD COLUMN customer_signature TEXT;
 
 -- migrations/003_add_job_priority_index.sql
@@ -2358,18 +2659,18 @@ const PDFDocument = require('pdfkit');
 const generateJobCardPDF = async (jobCardId) => {
   const job = await getJobCardById(jobCardId);
   const doc = new PDFDocument();
-  
+
   doc.fontSize(20).text('JOB CARD', { align: 'center' });
   doc.fontSize(12).text(`Job #${job.id}`);
   doc.text(`Customer: ${job.customer.name}`);
   doc.text(`Technician: ${job.technician.name}`);
   doc.text(`Work Performed: ${job.work_performed}`);
-  
+
   if (job.customer_signature) {
     // Add signature image
     doc.image(Buffer.from(job.customer_signature, 'base64'));
   }
-  
+
   doc.end();
   return doc;
 };
@@ -2381,11 +2682,11 @@ const generateJobCardPDF = async (jobCardId) => {
 // Notify customer when job completed
 const sendCompletionEmail = async (jobCardId) => {
   const job = await getJobCardById(jobCardId);
-  
+
   await sendEmail({
     to: job.customer.email,
     subject: `Job Completed - ${job.title}`,
-    body: `Dear ${job.customer.name}, your job has been completed...`
+    body: `Dear ${job.customer.name}, your job has been completed...`,
   });
 };
 ```
@@ -2409,25 +2710,25 @@ router.post('/:id/photos', upload.array('photos', 5), uploadPhotos);
 
 ```javascript
 // Notify supervisors when job status changes
-const io = require('socket.io')(server);
+const io = require("socket.io")(server);
 
-io.on('connection', (socket) => {
-  socket.on('subscribe-to-jobs', () => {
-    socket.join('job-updates');
+io.on("connection", (socket) => {
+  socket.on("subscribe-to-jobs", () => {
+    socket.join("job-updates");
   });
 });
 
 // In service layer
 const updateJobCard = async (jobCardId, updateData) => {
   // ... update logic
-  
+
   if (updateData.status) {
-    io.to('job-updates').emit('job-status-changed', {
+    io.to("job-updates").emit("job-status-changed", {
       jobCardId,
-      newStatus: updateData.status
+      newStatus: updateData.status,
     });
   }
-  
+
   return updatedJob;
 };
 ```
@@ -2485,20 +2786,20 @@ POST /api/v1/job-cards/batch-assign
 
 ```javascript
 // Cache frequently accessed data
-const redis = require('redis');
+const redis = require("redis");
 const client = redis.createClient();
 
 const getJobCardById = async (jobCardId) => {
   // Check cache first
   const cached = await client.get(`job:${jobCardId}`);
   if (cached) return JSON.parse(cached);
-  
+
   // Fetch from database
-  const job = await pool.query('SELECT ...');
-  
+  const job = await pool.query("SELECT ...");
+
   // Cache for 5 minutes
   await client.setex(`job:${jobCardId}`, 300, JSON.stringify(job));
-  
+
   return job;
 };
 ```
@@ -2527,18 +2828,18 @@ query GetJobCard($id: ID!) {
 
 ```javascript
 // Push notifications
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 
 const notifyTechnicianOfNewJob = async (technicianId, jobId) => {
   const fcmToken = await getUserFCMToken(technicianId);
-  
+
   await admin.messaging().send({
     token: fcmToken,
     notification: {
-      title: 'New Job Assigned',
-      body: 'You have a new job card to complete'
+      title: "New Job Assigned",
+      body: "You have a new job card to complete",
     },
-    data: { jobCardId: jobId.toString() }
+    data: { jobCardId: jobId.toString() },
   });
 };
 ```
@@ -2549,10 +2850,10 @@ const notifyTechnicianOfNewJob = async (technicianId, jobId) => {
 
 ```sql
 -- Composite indexes for common queries
-CREATE INDEX idx_job_cards_status_technician 
+CREATE INDEX idx_job_cards_status_technician
   ON job_cards(status, technician_id);
 
-CREATE INDEX idx_job_cards_scheduled_status 
+CREATE INDEX idx_job_cards_scheduled_status
   ON job_cards(scheduled_date, status);
 ```
 
@@ -2591,24 +2892,28 @@ SELECT * FROM job_cards WHERE id > $1 LIMIT $2;
 ### 13.1 System Highlights
 
 **Architecture:**
+
 - ✅ Layered architecture (Controllers → Services → Database)
 - ✅ RESTful API design with consistent responses
 - ✅ Role-based access control (Supervisor vs Technician)
 - ✅ Middleware pipeline for authentication, authorization, validation
 
 **Database:**
+
 - ✅ Relational model with foreign keys and constraints
 - ✅ Automatic audit trail (triggers for status history)
 - ✅ Immutable completed jobs (data integrity)
 - ✅ Connection pooling for performance
 
 **Security:**
+
 - ✅ JWT-based stateless authentication
 - ✅ Bcrypt password hashing
 - ✅ SQL injection prevention (parameterized queries)
 - ✅ Input validation at multiple layers
 
 **Business Logic:**
+
 - ✅ State machine for job status transitions
 - ✅ Time validation (end time > start time)
 - ✅ Ownership verification (technicians only access their jobs)
@@ -2627,16 +2932,19 @@ SELECT * FROM job_cards WHERE id > $1 LIMIT $2;
 ### 13.3 Lessons Learned
 
 **What Went Well:**
+
 - Middleware pipeline makes code very readable
 - Database triggers automate audit trail (one less thing to forget)
 - Service layer keeps business logic centralized
 
 **Challenges:**
+
 - Dynamic query building is complex (but necessary)
 - JWT expiry handling requires frontend coordination
 - Testing requires mocking database (not implemented yet)
 
 **What I'd Do Differently:**
+
 - Add caching for statistics queries (they're slow)
 - Implement soft deletes instead of hard deletes
 - Add more granular logging (request IDs, timing)
@@ -2648,16 +2956,19 @@ SELECT * FROM job_cards WHERE id > $1 LIMIT $2;
 ### 14.1 Demo Flow Recommendation
 
 **1. Start with Architecture Diagram (5 min)**
+
 - Show layered architecture
 - Explain request flow
 - Highlight separation of concerns
 
 **2. Live Database Demo (10 min)**
+
 - Show tables in pgAdmin
 - Run sample queries
 - Demonstrate triggers firing
 
 **3. API Demo with Postman (20 min)**
+
 - Login → get token
 - Create job card (supervisor)
 - Start job (technician)
@@ -2665,6 +2976,7 @@ SELECT * FROM job_cards WHERE id > $1 LIMIT $2;
 - Try invalid operations (show error handling)
 
 **4. Code Walkthrough (30 min)**
+
 - Show middleware chain
 - Explain service layer logic
 - Point out validation layers
@@ -2677,6 +2989,7 @@ SELECT * FROM job_cards WHERE id > $1 LIMIT $2;
 **Q: Why not use an ORM like Sequelize?**
 
 A: I chose raw SQL for:
+
 - **Performance**: No abstraction overhead
 - **Control**: Complex queries are easier to optimize
 - **Learning**: Better understanding of SQL
@@ -2709,6 +3022,7 @@ A: Not implemented yet. Would use `multer` for multipart/form-data, store files 
 **Q: What about logging and monitoring?**
 
 A: Currently console.log. Production would use:
+
 - **Winston/Bunyan** for structured logging
 - **Sentry** for error tracking
 - **Prometheus** for metrics
@@ -2763,4 +3077,4 @@ npm run dev
 
 **END OF BACKEND DOCUMENTATION**
 
-*This document serves as comprehensive technical documentation for the Job Card Management System backend. It covers architecture, design decisions, code walkthroughs, and deployment considerations suitable for presentation to senior software engineers.*
+_This document serves as comprehensive technical documentation for the Job Card Management System backend. It covers architecture, design decisions, code walkthroughs, and deployment considerations suitable for presentation to senior software engineers._

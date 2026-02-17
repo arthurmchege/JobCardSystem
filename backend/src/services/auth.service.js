@@ -23,7 +23,7 @@ const registerUser = async( userData ) => {
 
   // Insert user into database
   const result = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, phone)
+    `INSERT INTO users (name, email, password, role, phone)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, email, role, phone, created_at`,
     [name, email, passwordHash, role, phone || null]
@@ -36,7 +36,7 @@ const registerUser = async( userData ) => {
 const loginUser = async (email, password) => {
     // Find user by email
     const result = await pool.query(
-      'SELECT id, name, email, password_hash, role, phone FROM users WHERE email = $1',
+      'SELECT id, name, email, password, role, phone FROM users WHERE email = $1',
       [email]
     );
     
@@ -49,7 +49,7 @@ const loginUser = async (email, password) => {
     const user = result.rows[0];
 
     // Compared user with hash
-    const isPasswordValid = await comparePassword(password, user.password_hash);
+    const isPasswordValid = await comparePassword(password, user.password);
 
     if (!isPasswordValid) {
       const error = new Error('Invalid email or password');

@@ -1,6 +1,5 @@
 const customerService = require('../services/customer.service');
 
-
 // Get all customers
 // GET /api/v1/customers
  
@@ -35,14 +34,8 @@ const getAllCustomers = async (req, res) => {
 
 const getCustomerById = async (req, res) => {
   try {
-    const customerId = parseInt(req.params.id);
-    
-    if (isNaN(customerId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid customer ID'
-      });
-    }
+    // UUID is kept as string - NO parseInt or isNaN check
+    const customerId = req.params.id;
     
     const customer = await customerService.getCustomerById(customerId);
     
@@ -93,14 +86,8 @@ const createCustomer = async (req, res) => {
 
 const updateCustomer = async (req, res) => {
   try {
-    const customerId = parseInt(req.params.id);
-    
-    if (isNaN(customerId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid customer ID'
-      });
-    }
+    // UUID is kept as string - NO parseInt or isNaN check
+    const customerId = req.params.id;
     
     const updates = req.body;
     const updatedCustomer = await customerService.updateCustomer(customerId, updates);
@@ -127,14 +114,8 @@ const updateCustomer = async (req, res) => {
 
 const deleteCustomer = async (req, res) => {
   try {
-    const customerId = parseInt(req.params.id);
-    
-    if (isNaN(customerId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid customer ID'
-      });
-    }
+    // UUID is kept as string - NO parseInt or isNaN check
+    const customerId = req.params.id;
     
     await customerService.deleteCustomer(customerId);
     

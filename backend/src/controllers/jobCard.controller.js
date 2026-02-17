@@ -1,6 +1,3 @@
-// Controllers are the HTTP layer - they handle incoming requests, extract data,
-// call service functions, and format HTTP responses.
-
 const jobCardService = require('../services/jobCard.service');
 
 // GET /api/v1/job-cards
@@ -50,15 +47,8 @@ const getAllJobCards = async (req, res) => {
 
 const getJobCardById = async (req, res) => {
     try {
-        const jobCardId = parseInt(req.params.id);
-
-        // Validate ID is a number
-        if (isNaN(jobCardId)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid job card ID'
-            });
-        }
+        // UUID is kept as string - NO parseInt or isNaN check
+        const jobCardId = req.params.id;
 
         // Call service function
         const jobCard = await jobCardService.getJobCardById(jobCardId);
@@ -115,15 +105,8 @@ const createJobCard = async (req, res) => {
 
 const updateJobCard = async (req, res) => {
     try {
-        const jobCardId = parseInt(req.params.id);
-
-        // Validate ID
-        if (isNaN(jobCardId)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid job card ID'
-            });
-        }
+        // UUID is kept as string - NO parseInt or isNaN check
+        const jobCardId = req.params.id;
 
         // Extract update data from request body
         // Validation middleware has already validated this data
@@ -155,15 +138,8 @@ const updateJobCard = async (req, res) => {
 
 const completeJobCard = async (req, res) => {
     try {
-        const jobCardId = parseInt(req.params.id);
-
-        // Validate ID
-        if (isNaN(jobCardId)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid job card ID'
-            });
-        }
+        // UUID is kept as string - NO parseInt or isNaN check
+        const jobCardId = req.params.id;
 
         // Extract completion data from request body
         // Validation middleware has already validated this data
@@ -195,15 +171,8 @@ const completeJobCard = async (req, res) => {
 
 const deleteJobCard = async (req, res) => {
     try {
-        const jobCardId = parseInt(req.params.id);
-
-        // Validate ID
-        if (isNaN(jobCardId)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid job card ID'
-            });
-        }
+        // UUID is kept as string - NO parseInt or isNaN check
+        const jobCardId = req.params.id;
 
         // Call service function
         const result = await jobCardService.deleteJobCard(jobCardId);
@@ -227,7 +196,7 @@ const deleteJobCard = async (req, res) => {
 };
 
 // GET JOB CARD STATISTICS
-/// GET /api/v1/job-cards/stats
+// GET /api/v1/job-cards/stats
 
 const getJobCardStatistics = async (req, res) => {
     try {
@@ -250,7 +219,6 @@ const getJobCardStatistics = async (req, res) => {
         });
     }
 };
-
 
 module.exports = {
     getAllJobCards,

@@ -10,25 +10,17 @@ const isoDateString = Joi.string().isoDate().messages({
 // POST /api/v1/job-cards
 
 const createJobCardSchema = Joi.object({
-    customer_id: Joi.number()
-        .integer()
-        .positive()
-        .required()
+    customer_id: Joi.string().uuid().required()
         .messages({
-            'number.base': 'customer_id must be a number',
-            'number.integer': 'customer_id must be an integer',
-            'number.positive': 'customer_id must be positive',
+            'string.guid': 'customer_id must be a valid UUID',
+            'string.uuid': 'customer_id must be a valid UUID',
             'any.required': 'customer_id is required'
         }),
 
-    technician_id: Joi.number()
-        .integer()
-        .positive()
-        .required()
+    technician_id: Joi.string().uuid().required()
         .messages({
-            'number.base': 'technician_id must be a number',
-            'number.integer': 'technician_id must be an integer',
-            'number.positive': 'technician_id must be positive',
+            'string.guid': 'technician_id must be a valid UUID',
+            'string.uuid': 'technician_id must be a valid UUID',
             'any.required': 'technician_id is required'
         }),
 
@@ -154,8 +146,6 @@ const updateJobCardSchema = Joi.object({
 // SCHEMA: COMPLETE JOB CARD
 // POST /api/v1/job-cards/:id/complete
 
-// This schema is STRICT - all completion fields are required.
-
 const completeJobCardSchema = Joi.object({
     actual_start_time: isoDateString
         .allow(null)
@@ -185,9 +175,7 @@ const completeJobCardSchema = Joi.object({
         .allow('', null)
         .pattern(/^data:image\/(png|jpeg|jpg);base64,/)
         .messages({
-            'string.empty': 'customer_signature is required',
-            'string.pattern.base': 'customer_signature must be a base64 encoded image (data:image/png;base64,... or data:image/jpeg;base64,...)',
-            'any.required': 'customer_signature is required for completion'
+            'string.pattern.base': 'customer_signature must be a base64 encoded image (data:image/png;base64,... or data:image/jpeg;base64,...)'
         }),
 
     notes: Joi.string()
@@ -199,7 +187,7 @@ const completeJobCardSchema = Joi.object({
 });
 
 // SCHEMA: QUERY PARAMETERS (for GET /api/v1/job-cards)
-// GET /api/v1/job-cards?status=pending&technician_id=5&page=2
+// GET /api/v1/job-cards?status=pending&technician_id=uuid&page=2
 
 const getJobCardsQuerySchema = Joi.object({
     // Status can be single value or comma-separated array
@@ -214,22 +202,18 @@ const getJobCardsQuerySchema = Joi.object({
 
     technician_id: Joi.alternatives()
         .try(
-            Joi.number().integer().positive(),
+            Joi.string().uuid(),
             Joi.string().valid('me') // Special value: 'me' = current user
         )
         .messages({
-            'number.base': 'technician_id must be a number or "me"',
-            'number.integer': 'technician_id must be an integer',
-            'number.positive': 'technician_id must be positive'
+            'string.guid': 'technician_id must be a valid UUID or "me"',
+            'string.uuid': 'technician_id must be a valid UUID or "me"'
         }),
 
-    customer_id: Joi.number()
-        .integer()
-        .positive()
+    customer_id: Joi.string().uuid()
         .messages({
-            'number.base': 'customer_id must be a number',
-            'number.integer': 'customer_id must be an integer',
-            'number.positive': 'customer_id must be positive'
+            'string.guid': 'customer_id must be a valid UUID',
+            'string.uuid': 'customer_id must be a valid UUID'
         }),
 
     start_date: isoDateString,
@@ -265,26 +249,9 @@ const getJobCardsQuerySchema = Joi.object({
         })
 });
 
-// SCHEMA: ID PARAMETER VALIDATION
-// GET/PATCH/DELETE /api/v1/job-cards/:id
-
-const jobCardIdParamSchema = Joi.object({
-    id: Joi.number()
-        .integer()
-        .positive()
-        .required()
-        .messages({
-            'number.base': 'Job card ID must be a number',
-            'number.integer': 'Job card ID must be an integer',
-            'number.positive': 'Job card ID must be positive',
-            'any.required': 'Job card ID is required'
-        })
-});
-
 module.exports = {
     createJobCardSchema,
     updateJobCardSchema,
     completeJobCardSchema,
-    getJobCardsQuerySchema,
-    jobCardIdParamSchema
+    getJobCardsQuerySchema
 };

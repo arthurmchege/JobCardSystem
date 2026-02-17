@@ -1,7 +1,6 @@
 const Joi = require('joi');
 
 // Validation schema for user registration
-
 const registerSchema = Joi.object({
   name: Joi.string()
     .min(2)
@@ -47,7 +46,6 @@ const registerSchema = Joi.object({
 });
 
 // Validation schema for user login
-
 const loginSchema = Joi.object({
   email: Joi.string()
     .email()
@@ -65,5 +63,6 @@ const loginSchema = Joi.object({
 });
 
 module.exports = {
-  registerSchema, loginSchema
+  registerSchema,
+  loginSchema
 };

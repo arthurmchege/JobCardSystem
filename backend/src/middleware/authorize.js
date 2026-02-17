@@ -1,5 +1,5 @@
 /*
-  Middleware to check if user has required role(s)
+  Middleware to check if user has required role
   Must be used AFTER authenticate middleware
  */
 
