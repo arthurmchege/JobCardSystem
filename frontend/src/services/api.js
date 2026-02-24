@@ -46,7 +46,7 @@ const fetchWithAuth = async (url, options = {}) => {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...options,
       headers,
-      credentials: 'omit', // equivalent to withCredentials: false
+      credentials: 'omit',
     });
     
     return await handleResponse(response);
@@ -55,10 +55,8 @@ const fetchWithAuth = async (url, options = {}) => {
     if (error instanceof APIError && error.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // window.location.href = '/login';
     }
     
-    // Log and re-throw the error
     console.error('API Error:', error);
     throw error;
   }
@@ -142,6 +140,21 @@ export const jobCardAPI = {
 
   getStatistics: async () => {
     return await fetchWithAuth('/job-cards/stats');
+  },
+
+  downloadPDF: async (id) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/job-cards/${id}/pdf`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || 'Failed to download PDF');
+    }
+
+    return response.blob();
   }
 };
 
@@ -212,7 +225,6 @@ export const userAPI = {
     return await fetchWithAuth('/users/stats');
   },
 
-  //  Delete user method
   delete: async (id) => {
     return await fetchWithAuth(`/users/${id}`, {
       method: 'DELETE',

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { userAPI } from '../../services/api';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 
 const UserList = () => {
   const location = useLocation();

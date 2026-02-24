@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jobCardAPI } from '../../services/api';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 import { SkeletonDetail } from '../../components/ui/Skeleton';
 
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';

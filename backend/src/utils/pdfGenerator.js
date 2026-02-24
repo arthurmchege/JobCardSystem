@@ -3,11 +3,12 @@
 
 const PDFDocument = require('pdfkit');
 
-/**
- * Generate a job card completion report PDF
- * @param {Object} jobCard - Job card data with customer and technician details
- * @returns {PDFDocument} - PDF document stream
- */
+// Company details from environment variables with sensible fallbacks
+const COMPANY_NAME     = process.env.COMPANY_NAME    || 'COPY CAT GROUP';
+const COMPANY_TAGLINE  = process.env.COMPANY_TAGLINE || 'Photocopier Sales, Installation & Maintenance';
+const COMPANY_LOCATION = process.env.COMPANY_LOCATION || 'Nairobi, Kenya';
+
+// Generate a job card completion report PDF
 const generateJobCardPDF = (jobCard) => {
   // Create a new PDF document
   const doc = new PDFDocument({
@@ -24,11 +25,11 @@ const generateJobCardPDF = (jobCard) => {
   doc
     .fontSize(24)
     .font('Helvetica-Bold')
-    .text('COPY CAT GROUP', { align: 'center' })
+    .text(COMPANY_NAME.toUpperCase(), { align: 'center' })
     .fontSize(10)
     .font('Helvetica')
-    .text('Photocopier Sales, Installation & Maintenance', { align: 'center' })
-    .text('Nairobi, Kenya', { align: 'center' })
+    .text(COMPANY_TAGLINE, { align: 'center' })
+    .text(COMPANY_LOCATION, { align: 'center' })
     .moveDown(0.5);
 
   // Report Title
@@ -87,8 +88,8 @@ const generateJobCardPDF = (jobCard) => {
     .font('Helvetica-Bold')
     .text('Status: ', { continued: true })
     .font('Helvetica')
-    .text(jobCard.status.toUpperCase(), { 
-      color: jobCard.status === 'completed' ? '#00AA00' : '#000000' 
+    .text(jobCard.status.toUpperCase(), {
+      color: jobCard.status === 'completed' ? '#00AA00' : '#000000'
     })
     .moveDown(1);
 
@@ -261,7 +262,6 @@ const generateJobCardPDF = (jobCard) => {
     .text('CUSTOMER SIGNATURE', 50, doc.y)
     .moveDown(0.5);
 
-  // Signature line
   doc
     .fontSize(10)
     .font('Helvetica')

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { customerAPI } from '../../services/api';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 import { SkeletonTable } from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
 
@@ -24,7 +24,7 @@ const CustomerList = () => {
       setCustomers(res.data?.customers || res.data || []);
     } catch { toast.error('Failed to load customers'); }
     finally { setLoading(false); }
-  }, [search]);
+  }, [search, toast]);
 
   useEffect(() => { load(); }, [load]);
 

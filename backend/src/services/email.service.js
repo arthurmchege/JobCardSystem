@@ -19,6 +19,11 @@ const createTransporter = () => {
   });
 };
 
+// Base URL for links in emails - comes from environment variable
+// Development: http://localhost:5173
+// Production:  https://yourdomain.com
+const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+
 // ============================================================================
 // EMAIL TEMPLATES
 // ============================================================================
@@ -94,7 +99,7 @@ const getJobAssignmentEmail = (jobCard, technician) => {
             <p>Please log in to the system to view full details and start the job when ready.</p>
             
             <center>
-              <a href="http://localhost:5173/technician/jobs/${jobCard.id}" class="button">View Job Details</a>
+              <a href="${APP_URL}/technician/jobs/${jobCard.id}" class="button">View Job Details</a>
             </center>
           </div>
           
@@ -182,7 +187,7 @@ const getJobCompletionEmail = (jobCard, supervisor) => {
             <p>You can download the PDF report or view full details in the system.</p>
             
             <center>
-              <a href="http://localhost:5173/supervisor/jobs/${jobCard.id}" class="button">View Job Details</a>
+              <a href="${APP_URL}/supervisor/jobs/${jobCard.id}" class="button">View Job Details</a>
             </center>
           </div>
           
@@ -311,7 +316,6 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    
     console.log('✅ Job assignment email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
@@ -341,7 +345,6 @@ const sendJobCompletionEmailToSupervisor = async (jobCard, supervisor) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    
     console.log('✅ Job completion email sent to supervisor:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
@@ -371,7 +374,6 @@ const sendJobCompletionEmailToCustomer = async (jobCard) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    
     console.log('✅ Job completion email sent to customer:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
@@ -400,7 +402,6 @@ const sendTestEmail = async (toEmail) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    
     console.log('✅ Test email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {

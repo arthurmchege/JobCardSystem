@@ -1,10 +1,10 @@
 // src/pages/supervisor/UserDetail.jsx
 // User detail page showing user info and job statistics
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { userAPI, jobCardAPI } from '../../services/api';
-import { useToast } from '../../components/ui/Toast';
+import { useToast } from '../../hooks/useToast';
 import { SkeletonDetail } from '../../components/ui/Skeleton';
 
 const UserDetail = () => {
@@ -25,9 +25,9 @@ const UserDetail = () => {
   useEffect(() => {
     loadUserData();
     loadUserJobs();
-  }, [id]);
+  }, [id, loadUserData, loadUserJobs]);
 
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -38,9 +38,9 @@ const UserDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const loadUserJobs = async () => {
+  const loadUserJobs = useCallback(async () => {
     setLoadingJobs(true);
     try {
       // Get all jobs for this technician
@@ -51,7 +51,7 @@ const UserDetail = () => {
     } finally {
       setLoadingJobs(false);
     }
-  };
+  }, [id]);
 
   const handleDelete = async () => {
     setDeleting(true);
