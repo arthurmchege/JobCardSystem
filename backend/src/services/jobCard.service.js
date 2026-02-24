@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const emailService = require('./email.service'); // ✅ ADD EMAIL SERVICE
 
 // FUNCTION 1: GET ALL JOB CARDS (WITH DYNAMIC FILTERING)
 
@@ -271,7 +272,7 @@ const getJobCardById = async (jobCardId) => {
     };
 };
 
-// FUNCTION 3: CREATE NEW JOB CARD
+// FUNCTION 3: CREATE NEW JOB CARD (WITH EMAIL NOTIFICATION)
 
 const createJobCard = async (jobCardData) => {
     const {
@@ -286,9 +287,8 @@ const createJobCard = async (jobCardData) => {
     } = jobCardData;
 
     // VALIDATION 1: Verify customer exists
-
     const customerCheck = await pool.query(
-        'SELECT id FROM customers WHERE id = $1',
+        'SELECT id, name, email, phone, address, contact_person FROM customers WHERE id = $1',
         [customer_id]
     );
 
@@ -300,7 +300,7 @@ const createJobCard = async (jobCardData) => {
 
     // VALIDATION 2: Verify technician exists AND has correct role
     const technicianCheck = await pool.query(
-        'SELECT id, role FROM users WHERE id = $1',
+        'SELECT id, name, email, phone, role FROM users WHERE id = $1',
         [technician_id]
     );
 
@@ -357,7 +357,19 @@ const createJobCard = async (jobCardData) => {
     const result = await pool.query(query, values);
 
     // FETCH COMPLETE JOB CARD WITH JOINS
-    return await getJobCardById(result.rows[0].id);
+    const newJobCard = await getJobCardById(result.rows[0].id);
+
+    // ✅ SEND EMAIL NOTIFICATION TO TECHNICIAN
+    try {
+        console.log('📧 Sending job assignment email to:', newJobCard.technician.email);
+        await emailService.sendJobAssignmentEmail(newJobCard, newJobCard.technician);
+        console.log('✅ Job assignment email sent successfully');
+    } catch (emailError) {
+        // Log error but don't fail job creation if email fails
+        console.error('⚠️  Failed to send job assignment email:', emailError.message);
+    }
+
+    return newJobCard;
 };
 
 // FUNCTION 4: UPDATE JOB CARD
@@ -478,8 +490,7 @@ const updateJobCard = async (jobCardId, updateData) => {
     return await getJobCardById(jobCardId);
 };
 
-// FUNCTION 5: COMPLETE JOB CARD
-
+// FUNCTION 5: COMPLETE JOB CARD (WITH EMAIL NOTIFICATIONS)
 
 const completeJobCard = async (jobCardId, completionData) => {
     // Fetch current job status
@@ -586,7 +597,41 @@ const completeJobCard = async (jobCardId, completionData) => {
 
     // Database trigger logs completion
     // Return completed job card
-    return await getJobCardById(jobCardId);
+    const completedJob = await getJobCardById(jobCardId);
+
+    // ✅ SEND EMAIL TO SUPERVISORS
+    try {
+        console.log('📧 Sending job completion emails to supervisors...');
+        
+        const supervisors = await pool.query(
+            'SELECT id, name, email FROM users WHERE role = $1',
+            ['supervisor']
+        );
+
+        for (const supervisor of supervisors.rows) {
+            if (supervisor.email) {
+                await emailService.sendJobCompletionEmailToSupervisor(completedJob, supervisor);
+            }
+        }
+        console.log('✅ Supervisor emails sent successfully');
+    } catch (emailError) {
+        console.error('⚠️  Failed to send supervisor emails:', emailError.message);
+    }
+
+    // ✅ SEND EMAIL TO CUSTOMER
+    try {
+        if (completedJob.customer.email) {
+            console.log('📧 Sending job completion email to customer:', completedJob.customer.email);
+            await emailService.sendJobCompletionEmailToCustomer(completedJob);
+            console.log('✅ Customer email sent successfully');
+        } else {
+            console.log('⚠️  Customer has no email, skipping customer notification');
+        }
+    } catch (emailError) {
+        console.error('⚠️  Failed to send customer email:', emailError.message);
+    }
+
+    return completedJob;
 };
 
 // FUNCTION 6: DELETE JOB CARD
@@ -741,9 +786,9 @@ const getJobCardStatistics = async () => {
 module.exports = {
     getAllJobCards,
     getJobCardById,
-    createJobCard,
+    createJobCard,        // ✅ Now sends email to technician
     updateJobCard,
-    completeJobCard,
+    completeJobCard,      // ✅ Now sends emails to supervisor and customer
     deleteJobCard,
     getJobCardStatistics
 };

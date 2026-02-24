@@ -1,4 +1,5 @@
 const jobCardService = require('../services/jobCard.service');
+const pdfGenerator = require('../utils/pdfGenerator');
 
 // GET /api/v1/job-cards
 
@@ -220,6 +221,59 @@ const getJobCardStatistics = async (req, res) => {
     }
 };
 
+const { generateJobCardPDF } = require('../utils/pdfGenerator');
+
+/**
+ * Generate PDF report for a job card
+ * GET /api/v1/job-cards/:id/pdf
+ * Private - Supervisor only
+ */
+const generateJobCardPDFReport = async (req, res) => {
+  try {
+    const jobCardId = req.params.id;
+
+    // Get job card with full details
+    const jobCard = await jobCardService.getJobCardById(jobCardId);
+
+    if (!jobCard) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job card not found'
+      });
+    }
+
+    // Only allow PDF generation for completed jobs
+    if (jobCard.status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        error: 'PDF can only be generated for completed jobs'
+      });
+    }
+
+    // Generate PDF
+    const pdfDoc = generateJobCardPDF(jobCard);
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=job-card-${jobCardId.substring(0, 8)}.pdf`
+    );
+
+    // Pipe the PDF to the response
+    pdfDoc.pipe(res);
+
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'Failed to generate PDF report'
+    });
+  }
+};
+
 module.exports = {
     getAllJobCards,
     getJobCardById,
@@ -227,5 +281,6 @@ module.exports = {
     updateJobCard,
     completeJobCard,
     deleteJobCard,
-    getJobCardStatistics
+    getJobCardStatistics,
+    generateJobCardPDFReport
 };

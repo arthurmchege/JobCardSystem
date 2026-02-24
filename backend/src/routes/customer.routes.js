@@ -5,6 +5,10 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validateRequest = require('../middleware/validateRequest');
 const { createCustomerSchema, updateCustomerSchema, getCustomersQuerySchema } = require('../validators/customer.validator');
+const { sanitizeMiddleware } = require('../utils/sanitize');
+
+router.use(sanitizeMiddleware);
+
 
 // Middleware to validate query parameters
 const validateQuery = (schema) => {
@@ -99,5 +103,6 @@ router.delete('/:id',
   authorize(['supervisor']),
   customerController.deleteCustomer
 );
+
 
 module.exports = router;

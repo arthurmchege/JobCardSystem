@@ -4,14 +4,21 @@ const authController = require('../controllers/auth.controller');
 const authenticate = require('../middleware/authenticate');
 const validateRequest = require('../middleware/validateRequest');
 const { registerSchema, loginSchema } = require('../validators/auth.validator');
+const { sanitizeMiddleware } = require('../utils/sanitize');
 
 console.log('✅ Auth routes file loaded successfully');
-  
+
+// ============================================================================
+// APPLY SANITIZATION FIRST (BEFORE ANY ROUTES)
+// ============================================================================
+router.use(sanitizeMiddleware);
+
 // Register a user
 // POST /api/v1/auth/register
 router.post('/register',
   validateRequest(registerSchema),
-  authController.register);  
+  authController.register
+);
 
 // Login a user
 // POST /api/v1/auth/login

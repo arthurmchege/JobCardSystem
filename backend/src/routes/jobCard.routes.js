@@ -10,6 +10,8 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validateRequest = require('../middleware/validateRequest');
 const { verifyJobCardOwnership, filterJobCardsByRole } = require('../middleware/jobCardAuth');
+const { sanitizeMiddleware } = require('../utils/sanitize');
+const emailService = require('../services/email.service');
 const {
   createJobCardSchema,
   updateJobCardSchema,
@@ -17,8 +19,12 @@ const {
   getJobCardsQuerySchema
 } = require('../validators/jobCard.validator');
 
-// HELPER: Validate Query Parameters
+// ============================================================================
+// APPLY SANITIZATION FIRST (BEFORE ANY ROUTES)
+// ============================================================================
+router.use(sanitizeMiddleware);
 
+// HELPER: Validate Query Parameters
 const validateQuery = (schema) => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.query, {
@@ -46,7 +52,6 @@ const validateQuery = (schema) => {
 
 // GET JOB CARD STATISTICS
 // GET /api/v1/job-cards/stats
-
 router.get('/stats',
   authenticate,
   authorize(['supervisor']),
@@ -55,26 +60,42 @@ router.get('/stats',
 
 // GET ALL JOB CARDS (WITH FILTERING)
 // GET /api/v1/job-cards
-
 router.get('/',
   authenticate,
-  filterJobCardsByRole,  // Applies role-based filtering
+  filterJobCardsByRole,
   validateQuery(getJobCardsQuerySchema),
   jobCardController.getAllJobCards
 );
 
+// ============================================================================
+// GENERATE PDF REPORT (MUST BE BEFORE /:id ROUTE)
+// ============================================================================
+// GET /api/v1/job-cards/:id/pdf
+router.get('/:id/pdf',
+  authenticate,
+  authorize(['supervisor']),
+  jobCardController.generateJobCardPDFReport
+);
+
+// COMPLETE JOB CARD (MUST BE BEFORE /:id ROUTE)
+// POST /api/v1/job-cards/:id/complete
+router.post('/:id/complete',
+  authenticate,
+  verifyJobCardOwnership,
+  validateRequest(completeJobCardSchema),
+  jobCardController.completeJobCard
+);
+
 // GET SINGLE JOB CARD BY ID
 // GET /api/v1/job-cards/:id
-
 router.get('/:id',
   authenticate,
-  verifyJobCardOwnership,  // Verifies user owns the job or is supervisor
+  verifyJobCardOwnership,
   jobCardController.getJobCardById
 );
 
 // CREATE NEW JOB CARD
 // POST /api/v1/job-cards
-
 router.post('/',
   authenticate,
   authorize(['supervisor']),
@@ -84,31 +105,47 @@ router.post('/',
 
 // UPDATE JOB CARD
 // PATCH /api/v1/job-cards/:id
-
 router.patch('/:id',
   authenticate,
-  verifyJobCardOwnership,  // Verifies user owns the job or is supervisor
+  verifyJobCardOwnership,
   validateRequest(updateJobCardSchema),
   jobCardController.updateJobCard
 );
 
-// COMPLETE JOB CARD (SPECIAL ENDPOINT)
-// POST /api/v1/job-cards/:id/complete
-
-router.post('/:id/complete',
-  authenticate,
-  verifyJobCardOwnership,  // Verifies user owns the job or is supervisor
-  validateRequest(completeJobCardSchema),
-  jobCardController.completeJobCard
-);
-
 // DELETE JOB CARD
 // DELETE /api/v1/job-cards/:id
-
 router.delete('/:id',
   authenticate,
   authorize(['supervisor']),
   jobCardController.deleteJobCard
+);
+
+router.get('/test-email',
+  authenticate,
+  async (req, res) => {
+    try {
+      const result = await emailService.sendTestEmail(req.user.email);
+
+      if (result.success) {
+        res.json({
+           success: true,
+           message: `Test email sent to ${req.user.email}`,
+           messageId: result.messageId
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to send test email',
+          details: result.error
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 );
 
 module.exports = router;

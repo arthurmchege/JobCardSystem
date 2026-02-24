@@ -5,6 +5,12 @@ const authenticate = require('../middleware/authenticate');
 const authorize = require('../middleware/authorize');
 const validateRequest = require('../middleware/validateRequest');
 const { updateUserSchema, getUsersQuerySchema } = require('../validators/user.validator');
+const { sanitizeMiddleware } = require('../utils/sanitize');
+
+// ============================================================================
+// APPLY SANITIZATION FIRST (BEFORE ANY ROUTES)
+// ============================================================================
+router.use(sanitizeMiddleware);
 
 // Middleware to validate query parameters
 const validateQuery = (schema) => {
@@ -32,11 +38,9 @@ const validateQuery = (schema) => {
   };
 };
 
-
- // GET /api/v1/users/stats
- // Get user statistics
- // Private - Supervisor only
- 
+// GET /api/v1/users/stats
+// Get user statistics
+// Private - Supervisor only
 router.get('/stats',
   authenticate,
   authorize(['supervisor']),
@@ -45,8 +49,7 @@ router.get('/stats',
 
 // GET /api/v1/users
 // Get all users with filtering and pagination
- // Private - Supervisor only
- 
+// Private - Supervisor only
 router.get('/',
   authenticate,
   authorize(['supervisor']),
@@ -54,10 +57,8 @@ router.get('/',
   userController.getAllUsers
 );
 
-
-  // GET /api/v1/users/:id
-  // Get user by ID
-
+// GET /api/v1/users/:id
+// Get user by ID
 router.get('/:id',
   authenticate,
   userController.getUserById
@@ -71,10 +72,8 @@ router.patch('/:id',
   userController.updateUser
 );
 
-
 // DELETE /api/v1/users/:id
 // Delete user
-
 router.delete('/:id',
   authenticate,
   authorize(['supervisor']),

@@ -76,14 +76,53 @@ const SupervisorJobDetail = () => {
 
   const cfg = STATUS_CONFIG[job.status] || STATUS_CONFIG.pending;
 
+  const handleDownloadPDF = async (jobCardId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/v1/job-cards/${jobCardId}/pdf`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `job-card-${jobCardId.substring(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Error downloading PDF:', e);
+      alert('Failed to download PDF: ' + e.message);
+    }
+  };
+
   return (
     <div className="max-w-3xl space-y-4">
-      {/* Header - Back button removed (SupervisorDashboard provides one) */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-xl font-bold text-gray-900 flex-1">{job.title}</h1>
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${cfg.bg} ${cfg.text}`}>
-          <span className={`h-2 w-2 rounded-full ${cfg.dot}`}/>{cfg.label}
-        </span>
+        <div className="flex items-center gap-3">
+          {job.status === 'completed' && (
+            <button onClick={() => handleDownloadPDF(job._id || id)} 
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+              <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              PDF Report
+            </button>
+          )}
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${cfg.bg} ${cfg.text}`}>
+            <span className={`h-2 w-2 rounded-full ${cfg.dot}`}/>{cfg.label}
+          </span>
+        </div>
       </div>
 
       {/* Job Info */}
@@ -166,5 +205,6 @@ const SupervisorJobDetail = () => {
     </div>
   );
 };
+
 
 export default SupervisorJobDetail;

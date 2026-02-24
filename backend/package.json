@@ -23,8 +23,11 @@
     "helmet": "^8.1.0",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^8.0.1",
+    "pdfkit": "^0.17.2",
     "pg": "^8.18.0",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
