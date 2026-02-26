@@ -84,6 +84,41 @@ const JobDetail = () => {
     finally { setCompleting(false); }
   };
 
+  // ✅ PDF DOWNLOAD FUNCTION
+  const downloadPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:5000/api/v1/job-cards/${id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `job-${id.substring(0, 8)}-${job.customer?.name || 'report'}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast.error('Failed to download PDF');
+    }
+  };
+
   if (loading) return <SkeletonDetail />;
   if (error || !job) return (
     <div className="bg-red-50 border border-red-100 rounded-xl p-5 text-center">
@@ -134,6 +169,27 @@ const JobDetail = () => {
             ? <a href={`tel:${job.customer.phone}`} className="text-amber-600 font-medium">{job.customer.phone}</a>
             : null}/>
         <InfoRow label="Address" value={job.customer?.address} last/>
+      </div>
+
+      {/* ── PDF DOWNLOAD ── */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Job Report</p>
+        <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+          Download PDF report to show customer or for your records.
+        </p>
+        <button 
+          onClick={downloadPDF}
+          className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50
+            border border-gray-200 text-gray-700 text-sm font-semibold py-3 rounded-xl 
+            transition-all duration-150 active:scale-[0.99]"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+            />
+          </svg>
+          Download PDF Report
+        </button>
       </div>
 
       {/* ── START JOB ── */}

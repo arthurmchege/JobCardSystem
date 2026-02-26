@@ -20,6 +20,7 @@ console.log('✅ All routes imported successfully');
 // Initialize express app
 const app = express();
 
+
 // Get Port
 const PORT = process.env.PORT || 5000;
 
@@ -61,6 +62,7 @@ const getCorsOptions = () => {
 // MIDDLEWARE
 // ============================================================================
 
+app.set('trust proxy', 1)
 app.use(helmet());
 app.use(cors(getCorsOptions()));
 app.use(express.json());

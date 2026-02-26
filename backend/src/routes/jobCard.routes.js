@@ -73,7 +73,8 @@ router.get('/',
 // GET /api/v1/job-cards/:id/pdf
 router.get('/:id/pdf',
   authenticate,
-  authorize(['supervisor']),
+  authorize(['supervisor', 'technician']),
+  verifyJobCardOwnership,
   jobCardController.generateJobCardPDFReport
 );
 
