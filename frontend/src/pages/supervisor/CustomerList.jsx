@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { customerAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { SkeletonTable } from '../../components/ui/Skeleton';
@@ -17,16 +17,40 @@ const CustomerList = () => {
   const [submitting, setSub]      = useState(false);
   const { toast }                 = useToast();
 
-  const load = useCallback(async () => {
+  // ✅ FIXED: Simplified load function without useCallback
+  const load = async (searchQuery = '') => {
     setLoading(true);
     try {
-      const res = await customerAPI.getAll({ search: search || undefined, limit: 50 });
+      const res = await customerAPI.getAll({ 
+        search: searchQuery || undefined, 
+        limit: 50 
+      });
       setCustomers(res.data?.customers || res.data || []);
-    } catch { toast.error('Failed to load customers'); }
-    finally { setLoading(false); }
-  }, [search, toast]);
+    } catch { 
+      toast.error('Failed to load customers'); 
+    } finally { 
+      setLoading(false); 
+    }
+  };
 
-  useEffect(() => { load(); }, [load]);
+  // ✅ FIXED: Load once on component mount
+  useEffect(() => { 
+    load(); 
+  }, []);  // Empty dependency array = run once only
+
+  // ✅ FIXED: Debounced search (waits 500ms after user stops typing)
+  useEffect(() => {
+    // Skip if this is the initial mount (already loaded above)
+    if (customers.length === 0 && !search) return;
+    
+    // Debounce: wait 500ms before searching
+    const timer = setTimeout(() => {
+      load(search);
+    }, 500);
+    
+    // Cleanup: cancel timer if search changes again
+    return () => clearTimeout(timer);
+  }, [search]);  // Only re-run when search changes
 
   const openCreate = () => { setForm(EMPTY); setErrors({}); setModal('form'); setSelected(null); };
   const openEdit   = c  => { setSelected(c); setForm({ name:c.name, email:c.email, phone:c.phone||'', address:c.address||'', contact_person:c.contact_person||'' }); setErrors({}); setModal('form'); };
@@ -58,7 +82,8 @@ const CustomerList = () => {
         await customerAPI.create(payload);
         toast.success(`${form.name} added as a customer`);
       }
-      close(); load();
+      close(); 
+      load(search);  // ✅ Reload with current search
     } catch (err) {
       toast.error(typeof err === 'string' ? err : `Failed to ${selected ? 'update' : 'create'} customer`);
     } finally { setSub(false); }
@@ -69,7 +94,8 @@ const CustomerList = () => {
     try {
       await customerAPI.delete(selected.id);
       toast.success(`${selected.name} deleted`);
-      close(); load();
+      close(); 
+      load(search);  // ✅ Reload with current search
     } catch (err) {
       toast.error(typeof err === 'string' ? err : 'Failed to delete customer');
     } finally { setSub(false); }
