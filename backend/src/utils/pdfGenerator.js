@@ -1,5 +1,4 @@
-// utils/pdfGenerator.js
-// Generate professional PDF reports for completed job cards
+
 
 const PDFDocument = require('pdfkit');
 
@@ -8,8 +7,29 @@ const COMPANY_NAME     = process.env.COMPANY_NAME    || 'COPY CAT GROUP';
 const COMPANY_TAGLINE  = process.env.COMPANY_TAGLINE || 'Photocopier Sales, Installation & Maintenance';
 const COMPANY_LOCATION = process.env.COMPANY_LOCATION || 'Nairobi, Kenya';
 
-// Generate a job card completion report PDF
 const generateJobCardPDF = (jobCard) => {
+  const doc = createPDFDocument(jobCard);
+  doc.end();
+  return doc;
+};
+
+const generateJobCardPDFBuffer = (jobCard) => {
+  return new Promise((resolve, reject) => {
+    const doc = createPDFDocument(jobCard);
+    
+    // Collect PDF data in memory
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    
+    doc.end();
+  });
+};
+
+// Create PDF document with job card content
+
+const createPDFDocument = (jobCard) => {
   // Create a new PDF document
   const doc = new PDFDocument({
     size: 'A4',
@@ -36,7 +56,7 @@ const generateJobCardPDF = (jobCard) => {
   doc
     .fontSize(18)
     .font('Helvetica-Bold')
-    .text('JOB COMPLETION REPORT', { align: 'center' })
+    .text('JOB CARD REPORT', { align: 'center' })
     .moveDown(1);
 
   // Horizontal line
@@ -279,7 +299,7 @@ const generateJobCardPDF = (jobCard) => {
     .font('Helvetica')
     .fillColor('#666666')
     .text(
-      'This is a computer-generated document. No signature is required.',
+      'This is a computer-generated document.',
       50,
       bottomY,
       { align: 'center', width: 500 }
@@ -290,12 +310,10 @@ const generateJobCardPDF = (jobCard) => {
       { align: 'center' }
     );
 
-  // Finalize the PDF
-  doc.end();
-
   return doc;
 };
 
 module.exports = {
-  generateJobCardPDF
+  generateJobCardPDF,
+  generateJobCardPDFBuffer
 };

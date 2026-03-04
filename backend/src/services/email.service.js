@@ -1,12 +1,8 @@
-// services/email.service.js
-// Email notification service using Nodemailer
-
+// Email notification service using Nodemailer with PDF attachments
 const nodemailer = require('nodemailer');
+const { generateJobCardPDFBuffer } = require('../utils/pdfGenerator');
 
-// ============================================================================
-// CREATE EMAIL TRANSPORTER
-// ============================================================================
-
+// Creating email transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -56,6 +52,14 @@ const getJobAssignmentEmail = (jobCard, technician) => {
             border-radius: 5px; 
             margin-top: 15px;
           }
+          .attachment-notice {
+            background-color: #EEF2FF;
+            border: 2px solid #4F46E5;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+          }
         </style>
       </head>
       <body>
@@ -94,6 +98,13 @@ const getJobAssignmentEmail = (jobCard, technician) => {
                 ${jobCard.description}
               </div>
               ` : ''}
+            </div>
+            
+            <div class="attachment-notice">
+              <p style="margin: 0; font-weight: bold; color: #4F46E5; font-size: 16px;">📎 PDF Report Attached</p>
+              <p style="margin: 8px 0 0 0; font-size: 14px; color: #6B7280;">
+                A detailed PDF report is attached to this email for your reference and offline access.
+              </p>
             </div>
             
             <p>Please log in to the system to view full details and start the job when ready.</p>
@@ -296,7 +307,7 @@ const getPriorityColor = (priority) => {
 // ============================================================================
 
 /**
- * Send job assignment email to technician
+ * Send job assignment email to technician WITH PDF ATTACHMENT
  */
 const sendJobAssignmentEmail = async (jobCard, technician) => {
   try {
@@ -308,16 +319,42 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
     const transporter = createTransporter();
     const emailTemplate = getJobAssignmentEmail(jobCard, technician);
 
+    // ✅ GENERATE PDF ATTACHMENT
+    console.log('📄 Generating PDF attachment for job assignment email...');
+    const pdfBuffer = await generateJobCardPDFBuffer(jobCard);
+    console.log(`✅ PDF generated: ${pdfBuffer.length} bytes`);
+
+    // Create safe filename (sanitize title)
+    const safeTitle = jobCard.title
+      .replace(/[^a-z0-9]/gi, '-')  // Replace non-alphanumeric with dash
+      .replace(/-+/g, '-')           // Replace multiple dashes with single
+      .replace(/^-|-$/g, '')         // Remove leading/trailing dashes
+      .substring(0, 50);             // Limit length
+    
+    const filename = `job-${jobCard.id.substring(0, 8)}-${safeTitle}.pdf`;
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: technician.email,
       subject: emailTemplate.subject,
-      html: emailTemplate.html
+      html: emailTemplate.html,
+      
+      // ✅ ATTACH PDF
+      attachments: [
+        {
+          filename: filename,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Job assignment email sent:', info.messageId);
+    
+    console.log('✅ Job assignment email sent with PDF attachment:', info.messageId);
+    console.log(`   📎 Attachment: ${filename}`);
     return { success: true, messageId: info.messageId };
+    
   } catch (error) {
     console.error('❌ Failed to send job assignment email:', error);
     return { success: false, error: error.message };
