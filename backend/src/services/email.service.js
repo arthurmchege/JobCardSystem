@@ -319,10 +319,11 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
     const transporter = createTransporter();
     const emailTemplate = getJobAssignmentEmail(jobCard, technician);
 
-    // ✅ GENERATE PDF ATTACHMENT
+    // Generate PDF attachment as buffer
     console.log('📄 Generating PDF attachment for job assignment email...');
     const pdfBuffer = await generateJobCardPDFBuffer(jobCard);
     console.log(`✅ PDF generated: ${pdfBuffer.length} bytes`);
+    // Buffer? - A binary data stored in memory like Blob but in node.js
 
     // Create safe filename (sanitize title)
     const safeTitle = jobCard.title
@@ -333,13 +334,14 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
     
     const filename = `job-${jobCard.id.substring(0, 8)}-${safeTitle}.pdf`;
 
+    // Create email options with pdf attachment
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: technician.email,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
       
-      // ✅ ATTACH PDF
+      // Attach the PDF as an attachment
       attachments: [
         {
           filename: filename,
@@ -349,6 +351,7 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
       ]
     };
 
+    // Email is sent with attachment
     const info = await transporter.sendMail(mailOptions);
     
     console.log('✅ Job assignment email sent with PDF attachment:', info.messageId);

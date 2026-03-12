@@ -87,35 +87,19 @@ const JobDetail = () => {
   // PDF DOWNLOAD FUNCTION
   const downloadPDF = async () => {
     try {
-      // Get authentication item
-      const token = localStorage.getItem('token');
-      // Make HTTP request to backend
-      const response = await fetch(`http://localhost:5000/api/v1/job-cards/${id}/pdf`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      // Check if response is successful
-      if (!response.ok) {
-        throw new Error('Failed to download PDF');
-      }
-
-      // Convert the response to Blob (Binary Large Object)
-      // Blob - Binary data representing the pdf file. 
-      const blob = await response.blob();
+      const blob = await jobCardAPI.downloadPDF(id);
+      
       // Create temporary link to the Binary Large Object and trigger download
       const url = window.URL.createObjectURL(blob);
       // Create invisible download link
       const link = document.createElement('a');
       link.href = url;
       link.download = `job-${id.substring(0, 8)}-${job.customer?.name || 'report'}.pdf`;
-      
+
       // Cleanup - remove link from the DOM
       document.body.appendChild(link);
       link.click();
-      
+
       // Release the blob url from the memory
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
@@ -123,7 +107,7 @@ const JobDetail = () => {
       toast.success('PDF downloaded successfully!');
     } catch (error) {
       console.error('PDF download error:', error);
-      toast.error('Failed to download PDF');
+      toast.error(error.message || 'Failed to download PDF');
     }
   };
 

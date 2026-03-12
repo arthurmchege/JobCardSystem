@@ -232,4 +232,19 @@ export const userAPI = {
   }
 };
 
-export default { authAPI, customerAPI, jobCardAPI, userAPI };
+// PAYMENT API
+
+export const paymentAPI = {
+  initiateMpesa: async (jobId, phoneNumber, amount) => {
+    return await fetchWithAuth('/payments/mpesa/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ jobId, phoneNumber, amount }),
+    });
+  },
+
+  getPaymentStatus: async (checkoutRequestID) => {
+    return await fetchWithAuth(`/payments/status/${checkoutRequestID}`);
+  },
+};
+
+export default { authAPI, customerAPI, jobCardAPI, userAPI, paymentAPI };
