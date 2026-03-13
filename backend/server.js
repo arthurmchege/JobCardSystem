@@ -14,6 +14,7 @@ const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
 const customerRoutes = require('./src/routes/customer.routes');
 const jobCardRoutes = require('./src/routes/jobCard.routes');
+const paymentRoutes = require('./src/routes/payment.routes')
 
 console.log('✅ All routes imported successfully');
 
@@ -137,6 +138,7 @@ app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/users', createLimiter, userRoutes);
 app.use('/api/v1/customers', createLimiter, customerRoutes);
 app.use('/api/v1/job-cards', createLimiter, jobCardRoutes);
+app.use('/api/v1/payments', createLimiter, paymentRoutes);
 
 // ============================================================================
 // ERROR HANDLERS

@@ -235,16 +235,23 @@ export const userAPI = {
 // PAYMENT API
 
 export const paymentAPI = {
-  initiateMpesa: async (jobId, phoneNumber, amount) => {
-    return await fetchWithAuth('/payments/mpesa/initiate', {
+  initiatePayment: async (jobCardId, phoneNumber) => {
+    return await fetchWithAuth('/payments/initiate', {
       method: 'POST',
-      body: JSON.stringify({ jobId, phoneNumber, amount }),
+      body: JSON.stringify({
+        job_card_id: jobCardId,
+        phone_number: phoneNumber
+      }),
     });
   },
 
-  getPaymentStatus: async (checkoutRequestID) => {
-    return await fetchWithAuth(`/payments/status/${checkoutRequestID}`);
+  getPaymentStatus: async(paymentId) => {
+    return await fetchWithAuth(`/payments/${paymentId}`);
   },
+
+  getJobPayments: async (jobId) => {
+    return await fetchWithAuth(`/payments/job/${jobId}`);
+  }
 };
 
 export default { authAPI, customerAPI, jobCardAPI, userAPI, paymentAPI };
