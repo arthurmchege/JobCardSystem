@@ -67,6 +67,16 @@ const createJobCardSchema = Joi.object({
             'number.max': 'estimated_duration cannot exceed 1440 minutes (24 hours)'
         }),
 
+    payment_amount: Joi.number()
+        .positive()
+        .max(999999.99)
+        .allow(null)
+        .messages({
+            'number.base': 'payment amount must be a number',
+            'number.positive': 'payment_amount must be a positive number',
+            'number.max': 'payment_amount cannot exceed 999,999.99'
+        }),
+
     notes: Joi.string()
         .max(1000)
         .allow('', null)
@@ -118,6 +128,16 @@ const updateJobCardSchema = Joi.object({
             'number.integer': 'estimated_duration must be an integer (minutes)',
             'number.positive': 'estimated_duration must be positive',
             'number.max': 'estimated_duration cannot exceed 1440 minutes'
+        }),
+
+    payment_amount: Joi.number()
+        .positive()
+        .max(999999.99)
+        .allow(null)
+        .messages({
+            'number.base': 'payment_amount must be a number',
+            'number.positive': 'payment_amount must be a positive number',
+            'number.max': 'payment_amount cannot exceed 999,999.99'
         }),
 
     actual_start_time: isoDateString.allow(null),

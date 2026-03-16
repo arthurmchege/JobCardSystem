@@ -394,9 +394,14 @@ const updateJobCard = async (jobCardId, updateData) => {
     // VALIDATION 1: Prevent modification of completed jobs
     
     if (currentStatus === 'completed') {
-        const error = new Error('Cannot modify completed job cards. Completed jobs are immutable for data integrity.');
-        error.statusCode = 403; // 403 Forbidden
-        throw error;
+        const isOnlyUpdatingPayment = Object.keys(updateData).every(
+            key => key === 'payment_amount'
+        );
+        if (!isOnlyUpdatingPayment) {
+            const error = new Error('Cannot modify completed job cards. Completed jobs are immutable for data integrity.');
+            error.statusCode(403);
+            throw error;
+        }
     }
 
     // VALIDATION 2: Status transition logic
@@ -450,7 +455,8 @@ const updateJobCard = async (jobCardId, updateData) => {
         'actual_start_time',
         'actual_end_time',
         'work_performed',
-        'notes'
+        'notes',
+        'payment_amount'
     ];
 
     const updates = [];
