@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jobCardAPI } from '../../services/api';
+import PaymentModal from '../../components/payments/PaymentModal';
+import PaymentHistory from '../../components/payments/PaymentHistory';
 
 const STATUS_CONFIG = {
   pending:     { bg:'bg-yellow-100', text:'text-yellow-800', dot:'bg-yellow-400', label:'Pending' },
@@ -27,6 +29,8 @@ const SupervisorJobDetail = () => {
   const [error, setError]       = useState('');
   const [deleting, setDeleting] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentRefresh, setPaymentRefresh] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -161,6 +165,72 @@ const SupervisorJobDetail = () => {
             </>
           )}
         </div>
+      )}
+
+      {/* Payment Section - completed jobs only */}
+      {job.status === 'completed' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700">Payment</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {job.payment_status === 'paid' ? 'This job has been paid' :
+                 job.payment_status === 'pending' ? 'Payment in progress...' :
+                 'No payment yet'}
+              </p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold
+              ${job.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                job.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                'bg-gray-100 text-gray-500'}`}>
+              {job.payment_status === 'paid' ? 'Paid' :
+               job.payment_status === 'pending' ? 'Pending' : 'Unpaid'}
+            </span>
+          </div>
+
+          {job.payment_amount && (
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <p className="text-xs text-gray-400 mb-1">Amount Due</p>
+              <p className="text-xl font-bold text-slate-900">
+                KES {parseFloat(job.payment_amount).toLocaleString()}
+              </p>
+            </div>
+          )}
+
+          {job.payment_status !== 'paid' && job.payment_amount && (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full flex items-center justify-center gap-2 bg-green-600
+                hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl
+                transition-all active:scale-[0.99]">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 18h.01M8 21h8a2 2 0 002-2v-1a7 7 0 00-14 0v1a2 2 0 002 2z"/>
+              </svg>
+              Pay via M-Pesa
+            </button>
+          )}
+
+          {/* Payment History */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Payment History
+            </p>
+            <PaymentHistory key={paymentRefresh} jobId={id} />
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          job={job}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setPaymentRefresh(prev => prev + 1);
+            setShowPaymentModal(false);
+          }}
+        />
       )}
 
       {/* Delete (pending only) */}
