@@ -210,6 +210,10 @@ const getJobCardById = async (jobCardId) => {
             jc.created_at,
             jc.updated_at,
             jc.completed_at,
+            jc.payment_amount,
+            jc.payment_status,
+            jc.outstanding_balance,
+            jc.fully_paid_at,
             -- Customer information
             c.id as customer_id,
             c.name as customer_name,
@@ -255,6 +259,10 @@ const getJobCardById = async (jobCardId) => {
         created_at: row.created_at,
         updated_at: row.updated_at,
         completed_at: row.completed_at,
+        payment_amount: row.payment_amount,
+        payment_status: row.payment_status,
+        outstanding_balance: row.outstanding_balance,
+        fully_paid_at: row.fully_paid_at,
         customer: {
             id: row.customer_id,
             name: row.customer_name,
