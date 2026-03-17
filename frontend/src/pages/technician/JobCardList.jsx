@@ -141,15 +141,28 @@ const JobCardList = () => {
                     </span>
                   </div>
                   {/* Title */}
-                  <h3 className="text-sm font-semibold text-gray-900 truncate leading-snug
-                    group-hover:text-amber-700 transition-colors">
-                    {job.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate leading-snug
+                      group-hover:text-amber-700 transition-colors">
+                      {job.title}
+                    </h3>
+                    {job.payment_amount && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700 shrink-0">
+                        💰 Due
+                      </span>
+                    )}
+                  </div>
                   {/* Customer */}
                   <p className="text-xs text-gray-400 mt-1 truncate">
                     {job.customer?.name}
                     {job.customer?.address && <span className="text-gray-300"> · {job.customer.address}</span>}
                   </p>
+                  {/* Payment Amount */}
+                  {job.payment_amount && (
+                    <p className="text-xs font-semibold text-green-600 mt-1">
+                      KES {parseFloat(job.payment_amount).toLocaleString()}
+                    </p>
+                  )}
                 </div>
                 {/* Right */}
                 <div className="flex flex-col items-end gap-2 shrink-0">

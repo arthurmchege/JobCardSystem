@@ -3,7 +3,7 @@
 const PDFDocument = require('pdfkit');
 
 // Company details from environment variables with sensible fallbacks
-const COMPANY_NAME     = process.env.COMPANY_NAME    || 'COPY CAT GROUP';
+const COMPANY_NAME     = process.env.COMPANY_NAME    || 'JOB CARD SYSTEM';
 const COMPANY_TAGLINE  = process.env.COMPANY_TAGLINE || 'Photocopier Sales, Installation & Maintenance';
 const COMPANY_LOCATION = process.env.COMPANY_LOCATION || 'Nairobi, Kenya';
 
@@ -231,9 +231,28 @@ const createPDFDocument = (jobCard) => {
       .text('Estimated Duration: ', { continued: true })
       .font('Helvetica')
       .text(`${jobCard.estimated_duration} minutes`)
-      .moveDown(1);
-  } else {
-    doc.moveDown(0.7);
+      .moveDown(0.3);
+  }
+
+  // Payment details (if provided)
+  if (jobCard.payment_amount) {
+    doc
+      .font('Helvetica-Bold')
+      .text('Payment Amount: ', { continued: true })
+      .font('Helvetica')
+      .text(`KES ${Number(jobCard.payment_amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+      .moveDown(0.3);
+
+    if (jobCard.payment_status) {
+      doc
+        .font('Helvetica-Bold')
+        .text('Payment Status: ', { continued: true })
+        .font('Helvetica')
+        .text(jobCard.payment_status.replace('_', ' ').toUpperCase())
+        .moveDown(0.3);
+    }
+
+    doc.moveDown(0.4);
   }
 
   // Work Performed Section (only if completed)

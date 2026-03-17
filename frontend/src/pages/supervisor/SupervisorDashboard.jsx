@@ -48,7 +48,7 @@ const SupervisorDashboard = () => {
             <div className="flex items-center gap-2.5">
               <Logo size="sm" className="bg-white rounded-md p-1" />
               <div>
-                <p className="sup-title text-white font-bold text-[11px] tracking-widest leading-none">COPY CAT</p>
+                <p className="sup-title text-white font-bold text-[11px] tracking-widest leading-none">JOB CARD</p>
                 <p className="text-slate-500 text-[10px] mt-0.5 tracking-wide">Job Cards</p>
               </div>
             </div>

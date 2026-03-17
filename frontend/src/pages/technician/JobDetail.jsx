@@ -146,7 +146,12 @@ const JobDetail = () => {
           <span className={job.priority==='high'?'text-red-500 font-semibold':job.priority==='low'?'text-gray-400':'text-amber-500 font-medium'}>
             {job.priority?.charAt(0).toUpperCase()+job.priority?.slice(1)}
           </span>} />
-        {job.estimated_duration && <InfoRow label="Est. time" value={`${job.estimated_duration} min`}/>}
+        {job.estimated_duration && <InfoRow label="Est. time" value={`${job.estimated_duration} min`}/>}        
+        {job.payment_amount && (
+          <InfoRow label="Amount" value={`KES ${parseFloat(job.payment_amount).toLocaleString()}`} last={!isInProgress && !isCompleted} />
+        )}
+        {isInProgress && <InfoRow label="Started" value={fmtTime(job.actual_start_time)}/>}        
+        {isCompleted   && <InfoRow label="Completed" value={fmtTime(job.completed_at)} last/>}
         {isInProgress && <InfoRow label="Started" value={fmtTime(job.actual_start_time)}/>}
         {isCompleted   && <InfoRow label="Completed" value={fmtTime(job.completed_at)} last/>}
       </div>

@@ -33,6 +33,8 @@ const getAllJobCards = async (filters = {}) => {
             jc.created_at,
             jc.updated_at,
             jc.completed_at,
+            jc.payment_amount,
+            jc.payment_status,
             -- Customer information (JOIN)
             c.id as customer_id,
             c.name as customer_name,
@@ -161,6 +163,8 @@ const getAllJobCards = async (filters = {}) => {
         created_at: row.created_at,
         updated_at: row.updated_at,
         completed_at: row.completed_at,
+        payment_amount: row.payment_amount,
+        payment_status: row.payment_status,
         // Nested customer object
         customer: {
             id: row.customer_id,
@@ -291,6 +295,7 @@ const createJobCard = async (jobCardData) => {
         priority = 'medium',
         scheduled_date,
         estimated_duration,
+        payment_amount,
         notes
     } = jobCardData;
 
@@ -334,8 +339,9 @@ const createJobCard = async (jobCardData) => {
             priority,
             scheduled_date,
             estimated_duration,
+            payment_amount,
             notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING 
             id,
             customer_id,
@@ -359,6 +365,7 @@ const createJobCard = async (jobCardData) => {
         priority,
         scheduled_date,
         estimated_duration || null,
+        payment_amount || null,
         notes || null
     ];
 
@@ -636,8 +643,18 @@ const completeJobCard = async (jobCardId, completionData) => {
     try {
         if (completedJob.customer.email) {
             console.log('📧 Sending job completion email to customer:', completedJob.customer.email);
-            await emailService.sendJobCompletionEmailToCustomer(completedJob);
-            console.log('✅ Customer email sent successfully');
+
+            if (completedJob.payment_amount) {
+                // Job has a payment amount, generate token and send invoice
+                const paystackService = require('./paystack.service');
+                const token = await paystackService.generatePaymentToken(jobCardId);
+                await emailService.sendJobCompletionEmailToCustomer(completedJob, token);
+                console.log('✅ Invoice email with payment link sent to customer');
+            } else {
+                // No payment amount, send regular completion email
+                await emailService.sendJobCompletionEmailToCustomer(completedJob, null);
+                console.log('✅ Regular completion email sent to customer')
+            }
         } else {
             console.log('⚠️  Customer has no email, skipping customer notification');
         }

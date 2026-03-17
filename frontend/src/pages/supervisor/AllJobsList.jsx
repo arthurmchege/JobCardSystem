@@ -102,7 +102,7 @@ const AllJobsList = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  {['Job','Customer','Technician','Status','Priority','Scheduled'].map(h => (
+                  {['Job','Customer','Technician','Status','Priority','Payment','Scheduled'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50/80">
                       {h}
                     </th>
@@ -116,9 +116,16 @@ const AllJobsList = () => {
                     <tr key={job.id} onClick={() => navigate(`/supervisor/jobs/${job.id}`)}
                       className="hover:bg-amber-50/40 cursor-pointer transition-colors group">
                       <td className="px-4 py-3.5">
-                        <p className="font-semibold text-slate-800 group-hover:text-amber-700 transition-colors leading-snug">
-                          {job.title}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-slate-800 group-hover:text-amber-700 transition-colors leading-snug">
+                            {job.title}
+                          </p>
+                          {job.payment_amount && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
+                              💰 Due
+                            </span>
+                          )}
+                        </div>
                         {job.description && (
                           <p className="text-xs text-gray-400 truncate max-w-[200px] mt-0.5">{job.description}</p>
                         )}
@@ -133,6 +140,15 @@ const AllJobsList = () => {
                       </td>
                       <td className={`px-4 py-3.5 text-xs ${PRIORITY_COLOR[job.priority] || PRIORITY_COLOR.medium}`}>
                         {job.priority?.charAt(0).toUpperCase()+job.priority?.slice(1)}
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-600 text-xs">
+                        {job.payment_amount ? (
+                          <span className="font-medium text-green-600">
+                            KES {parseFloat(job.payment_amount).toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3.5 text-gray-400 text-xs">{fmt(job.scheduled_date)}</td>
                     </tr>

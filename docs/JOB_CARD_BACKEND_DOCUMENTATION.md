@@ -29,7 +29,7 @@
 
 ### 1.1 Problem Statement
 
-Copy Cat Group sends technicians to customer sites for photocopier installations, maintenance, and repairs. The existing paper-based job card system suffers from:
+The company sends technicians to customer sites for photocopier installations, maintenance, and repairs. The existing paper-based job card system suffers from:
 
 - **Lost or delayed job cards** (no central tracking)
 - **Lack of real-time visibility** (supervisors can't monitor progress)
@@ -858,7 +858,7 @@ const generateToken = (payload) => {
 // Payload structure
 {
   userId: 123,
-  email: "tech@copycat.com",
+  email: "tech@example.com",
   role: "technician",
   iat: 1706184000,   // Issued at
   exp: 1706270400    // Expires (24h later)
@@ -2072,7 +2072,7 @@ const isValid = await bcrypt.compare(password, storedHash);
 // Token contains NO sensitive data (just identifiers)
 {
   userId: 123,
-  email: "tech@copycat.com",
+  email: "tech@example.com",
   role: "technician",
   iat: 1706184000,
   exp: 1706270400
@@ -2253,7 +2253,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 // authenticate.js
 const token = req.headers.authorization.substring(7);
 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-req.user = { userId: 5, email: "john@copycat.com", role: "technician" };
+req.user = { userId: 5, email: "john@example.com", role: "technician" };
 
 // jobCardAuth.js (verifyJobCardOwnership)
 const jobCheck = await pool.query(
@@ -2392,7 +2392,7 @@ WHERE jc.id = 42;
       "technician": {
         "id": 5,
         "name": "John Doe",
-        "email": "john@copycat.com"
+        "email": "john@example.com"
       }
     }
   }
@@ -2582,7 +2582,7 @@ DATABASE_URL=postgresql://user:password@prod-db-host:5432/jobcards_prod
 JWT_SECRET=super-secret-production-key-256-bits
 JWT_EXPIRY=24h
 BCRYPT_ROUNDS=12
-CORS_ORIGIN=https://jobcards.copycatgroup.com
+CORS_ORIGIN=https://jobcards.example.com
 ```
 
 ### 11.3 Deployment Checklist

@@ -211,17 +211,16 @@ const deleteUser = async (userId) => {
       throw error;
     }
     
-    // Optional: Warn if user has completed jobs (they'll be orphaned)
-    // If you want to prevent this, uncomment:
-    /*
+    // If the user has any job cards (even completed ones), deleting will likely fail
+    // due to foreign key constraints (job_cards.technician_id -> users.id).
+    // This check gives a clearer error message to the client.
     if (totalJobs > 0) {
       const error = new Error(
-        `Cannot delete user. ${user.name} has ${totalJobs} job card(s) in history. Consider archiving instead of deleting.`
+        `Cannot delete user. ${user.name} has ${totalJobs} job card(s) in the system. Reassign or remove them before deleting the user.`
       );
       error.statusCode = 400;
       throw error;
     }
-    */
     
     // Delete the user
     await pool.query('DELETE FROM users WHERE id = $1', [userId]);
@@ -232,7 +231,16 @@ const deleteUser = async (userId) => {
     if (error.statusCode) {
       throw error;
     }
-    
+
+    // Handle common foreign key constraint errors (deleting user with related records)
+    if (error.code === '23503') {
+      const err = new Error(
+        'Cannot delete user because there are existing records linked to them (e.g. job cards). Reassign or remove those records first.'
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
     // Log and throw generic error for unexpected issues
     console.error('Delete user service error:', error);
     const err = new Error('Failed to delete user');

@@ -20,6 +20,7 @@ const CreateJobCard = () => {
     priority: 'medium',
     scheduled_date: '',
     estimated_duration: '',
+    payment_amount: '',
     notes: '',
   });
   const [errors, setErrors] = useState({});
@@ -60,6 +61,8 @@ const CreateJobCard = () => {
     if (form.estimated_duration && (isNaN(form.estimated_duration) || Number(form.estimated_duration) <= 0))
       e.estimated_duration = 'Must be a positive number of minutes';
     setErrors(e);
+    if (form.payment_amount && (isNaN(form.payment_amount) || Number(form.payment_amount) <= 0))
+      e.payment_amount = 'Payment amount must be a positive number';
     return Object.keys(e).length === 0;
   };
 
@@ -80,6 +83,7 @@ const CreateJobCard = () => {
       if (form.description.trim())    payload.description         = form.description.trim();
       if (form.estimated_duration)    payload.estimated_duration  = Number(form.estimated_duration);
       if (form.notes.trim())          payload.notes               = form.notes.trim();
+      if (form.payment_amount)       payload.payment_amount      = Number(form.payment_amount);
 
       const res = await jobCardAPI.create(payload);
       navigate(`/supervisor/jobs/${res.data.jobCard.id}`);
@@ -196,6 +200,17 @@ const CreateJobCard = () => {
               onChange={handleChange} placeholder="e.g. 120"
               className={inputClass('estimated_duration')}/>
             {errors.estimated_duration && <p className="mt-1 text-xs text-red-600">{errors.estimated_duration}</p>}
+          </div>
+
+                    {/* Payment Amount */}
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment amount <span className="text-gray-400 text-xs">(KES, optional)</span>
+              </label>
+              <input name="payment_amount" type="number" min="1" value={form.payment_amount}
+                  onChange={handleChange} placeholder="e.g. 4500"
+                  className={inputClass('payment_amount')}/>
+              {errors.payment_amount && <p className="mt-1 text-xs text-red-600">{errors.payment_amount}</p>}
           </div>
 
           {/* Description */}

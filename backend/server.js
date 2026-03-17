@@ -15,6 +15,7 @@ const userRoutes = require('./src/routes/user.routes');
 const customerRoutes = require('./src/routes/customer.routes');
 const jobCardRoutes = require('./src/routes/jobCard.routes');
 const paymentRoutes = require('./src/routes/payment.routes')
+const paystackRoutes = require('./src/routes/paystack.routes')
 
 console.log('✅ All routes imported successfully');
 
@@ -118,7 +119,7 @@ app.get('/api/v1/db-test', async (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Copy Cat Group - Job Card API',
+    message: 'Job Card API',
     version: '1.0.0',
     endpoints: {
       health: '/api/v1/health',
@@ -139,6 +140,7 @@ app.use('/api/v1/users', createLimiter, userRoutes);
 app.use('/api/v1/customers', createLimiter, customerRoutes);
 app.use('/api/v1/job-cards', createLimiter, jobCardRoutes);
 app.use('/api/v1/payments', createLimiter, paymentRoutes);
+app.use('/api/v1/', paystackRoutes)
 
 // ============================================================================
 // ERROR HANDLERS

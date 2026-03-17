@@ -1042,7 +1042,7 @@ const LoginPage = () => {
             type="email"
             value={email}
             onChange={e => { setEmail(e.target.value); setEmailErr(''); }}
-            placeholder="you@copycatgroup.com"
+            placeholder="you@example.com"
             className={emailErr ? 'border-red-400' : ''}
           />
           {emailErr && <p className="text-xs text-red-500">{emailErr}</p>}
@@ -1475,7 +1475,7 @@ Component                  API Service              Backend
 
 **Brand Identity:**
 
-- **Primary Color**: Amber (`#F59E0B`) - warm, energetic, Copy Cat brand
+- **Primary Color**: Amber (`#F59E0B`) - warm, energetic, our brand
 - **Dark Background**: Slate-900 (`#0F172A`) - professional, modern
 - **Typography**: 
   - **Headings**: Syne (bold, geometric, attention-grabbing)
@@ -1741,7 +1741,7 @@ const SupervisorDashboard = () => {
         {/* Logo */}
         <div className="px-5 py-5 border-b border-slate-800">
           <Logo size="sm" />
-          <p className="text-white font-bold text-xs">COPY CAT</p>
+          <p className="text-white font-bold text-xs">JOB CARD</p>
         </div>
 
         {/* Navigation */}
@@ -2099,7 +2099,7 @@ const TechnicianDashboard = () => {
               <Logo size="sm" />
               <div>
                 <p className="text-white text-xs font-bold">MY JOBS</p>
-                <p className="text-slate-500 text-[10px]">Copy Cat Group</p>
+                <p className="text-slate-500 text-[10px]">Job Card System</p>
               </div>
             </div>
           )}
@@ -2459,23 +2459,15 @@ useEffect(() => {
 - **Better UX**: No flickering/loading states
 - **Server-friendly**: Fewer requests
 
-### 10.4 Image Optimization
+### 10.4 Logo Component
 
 ```javascript
-// Logo component
-<img 
-  src={logoImage} 
-  alt="Copy Cat Group" 
-  className="h-10 w-auto"
-  loading="lazy"  // Native lazy loading
-  decoding="async" // Async decode
-/>
+// Logo component (text-based)
+<div className="text-xl font-bold text-white">
+  JOB CARD
+</div>
 
-// Future: Use WebP with PNG fallback
-<picture>
-  <source srcSet="logo.webp" type="image/webp" />
-  <img src="logo.png" alt="Logo" />
-</picture>
+// No image optimization needed - text-based logo
 ```
 
 ### 10.5 Bundle Size Optimization
@@ -2772,7 +2764,7 @@ npm run preview
 VITE_API_URL=http://localhost:5000/api/v1
 
 # .env.production
-VITE_API_URL=https://api.copycatgroup.com/api/v1
+VITE_API_URL=https://api.example.com/api/v1
 ```
 
 **Access in code:**

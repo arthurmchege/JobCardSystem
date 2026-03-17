@@ -23,7 +23,7 @@
 ## 1. Executive Summary
 
 ### 1.1 Problem Statement
-The Copy Cat Group operates a field-service task force for photocopier installations, maintenance, and repairs. The legacy paper-based job card system is burdened by lost/delayed job cards, poor operational accountability (no central tracking), lack of real-time visibility for supervisors, and fragmented data reporting.
+The company operates a field-service task force for photocopier installations, maintenance, and repairs. The legacy paper-based job card system is burdened by lost/delayed job cards, poor operational accountability (no central tracking), lack of real-time visibility for supervisors, and fragmented data reporting.
 
 ### 1.2 Solution
 The Job Card Management System digitizes the entire pipeline with:

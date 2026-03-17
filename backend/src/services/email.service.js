@@ -115,7 +115,7 @@ const getJobAssignmentEmail = (jobCard, technician) => {
           </div>
           
           <div class="footer">
-            <p>This is an automated message from Copy Cat Group Job Card System.</p>
+            <p>This is an automated message from Job Card System.</p>
             <p>If you have any questions, please contact your supervisor.</p>
           </div>
         </div>
@@ -203,7 +203,7 @@ const getJobCompletionEmail = (jobCard, supervisor) => {
           </div>
           
           <div class="footer">
-            <p>This is an automated message from Copy Cat Group Job Card System.</p>
+            <p>This is an automated message from Job Card System.</p>
           </div>
         </div>
       </body>
@@ -244,6 +244,7 @@ const getCustomerCompletionEmail = (jobCard) => {
             <p>Dear <strong>${jobCard.customer.name}</strong>,</p>
             
             <p>We're pleased to inform you that your service request has been completed successfully.</p>
+            <p>Please find your job report attached to this email (includes payment details).</p>
             
             <div class="job-details">
               <div class="detail-row">
@@ -255,6 +256,11 @@ const getCustomerCompletionEmail = (jobCard) => {
               <div class="detail-row">
                 <span class="label">Completed on:</span> ${new Date(jobCard.actual_end_time).toLocaleString('en-GB')}
               </div>
+              ${jobCard.payment_amount ? `
+              <div class="detail-row">
+                <span class="label">Amount Due:</span> KES ${Number(jobCard.payment_amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              ` : ''}
             </div>
             
             ${jobCard.work_performed ? `
@@ -265,7 +271,7 @@ const getCustomerCompletionEmail = (jobCard) => {
             ` : ''}
             
             <div class="thank-you">
-              <h2>Thank You for Choosing Copy Cat Group!</h2>
+              <h2>Thank You for Choosing Our Service!</h2>
               <p>We appreciate your business and hope you're satisfied with our service.</p>
             </div>
             
@@ -277,7 +283,7 @@ const getCustomerCompletionEmail = (jobCard) => {
           </div>
           
           <div class="footer">
-            <p><strong>Copy Cat Group</strong></p>
+            <p><strong>Job Card System</strong></p>
             <p>Photocopier Sales, Installation & Maintenance</p>
             <p>Nairobi, Kenya</p>
           </div>
@@ -406,15 +412,35 @@ const sendJobCompletionEmailToCustomer = async (jobCard) => {
     const transporter = createTransporter();
     const emailTemplate = getCustomerCompletionEmail(jobCard);
 
+    // Generate PDF report for the completed job
+    console.log('📄 Generating PDF attachment for customer completion email...');
+    const pdfBuffer = await generateJobCardPDFBuffer(jobCard);
+
+    const safeTitle = jobCard.title
+      .replace(/[^a-z0-9]/gi, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 50);
+
+    const filename = `job-${jobCard.id.substring(0, 8)}-${safeTitle}.pdf`;
+
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: jobCard.customer.email,
       subject: emailTemplate.subject,
-      html: emailTemplate.html
+      html: emailTemplate.html,
+      attachments: [
+        {
+          filename,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Job completion email sent to customer:', info.messageId);
+    console.log(`   📎 Attachment: ${filename}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Failed to send job completion email to customer:', error);
@@ -436,7 +462,7 @@ const sendTestEmail = async (toEmail) => {
       html: `
         <h1>Email Configuration Test</h1>
         <p>If you're reading this, email notifications are working correctly!</p>
-        <p><strong>Copy Cat Group</strong><br/>
+        <p><strong>Job Card System</strong><br/>
         Job Card Management System</p>
       `
     };

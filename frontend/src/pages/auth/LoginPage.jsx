@@ -65,7 +65,7 @@ const LoginPage = () => {
 
       <div className="auth-root min-h-screen flex bg-gray-50">
 
-        {/* ── Left panel – Copy Cat Group branding ── */}
+        {/* ── Left panel – Job Card System branding ── */}
         <div className="hidden lg:flex lg:w-[42%] bg-slate-900 flex-col justify-between p-12 relative overflow-hidden">
           {/* Geometric accent */}
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
@@ -73,11 +73,11 @@ const LoginPage = () => {
           <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10"
             style={{ background: 'radial-gradient(circle, #F59E0B, transparent)', transform: 'translate(-30%, 30%)' }} />
 
-          {/* Copy Cat Group Logo */}
+          {/* Job Card System Logo */}
           <div className="flex flex-col items-start gap-4">
             <Logo size="lg" className="bg-white rounded-lg p-2" />
             <div>
-              <p className="auth-title text-white font-bold text-2xl tracking-wide leading-none">COPY CAT GROUP</p>
+              <p className="auth-title text-white font-bold text-2xl tracking-wide leading-none">JOB CARD SYSTEM</p>
               <p className="text-amber-400 text-sm font-semibold mt-1"></p>
             </div>
           </div>
@@ -90,7 +90,7 @@ const LoginPage = () => {
             </h1>
             <p className="text-slate-400 text-sm leading-relaxed max-w-md mb-6">
               Streamline your field service operations with our comprehensive job tracking solution. 
-              Built for Copy Cat Group's photocopier installation, maintenance, and repair teams.
+              Built for photocopier installation, maintenance, and repair teams.
             </p>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
@@ -125,7 +125,7 @@ const LoginPage = () => {
 
           {/* Footer */}
           <div className="flex items-center justify-between text-xs text-slate-600">
-            <span>© 2026 Copy Cat Group</span>
+            <span>© 2026 Job Card System</span>
             <span>Nairobi, Kenya</span>
           </div>
         </div>
@@ -138,7 +138,7 @@ const LoginPage = () => {
             <div className="flex flex-col items-center gap-3 mb-8 lg:hidden">
               <Logo size="md" className="bg-white rounded-lg p-2 shadow-sm" />
               <div className="text-center">
-                <p className="auth-title text-slate-800 font-bold text-base">COPY CAT GROUP</p>
+                <p className="auth-title text-slate-800 font-bold text-base">JOB CARD SYSTEM</p>
                 <p className="text-slate-500 text-xs mt-0.5">Job Card System</p>
               </div>
             </div>
@@ -156,7 +156,7 @@ const LoginPage = () => {
                 </label>
                 <input type="email" autoComplete="email" value={email}
                   onChange={e => { setEmail(e.target.value); setEmailErr(''); }}
-                  placeholder="you@copycatgroup.com" className={field(emailErr)} />
+                  placeholder="you@example.com" className={field(emailErr)} />
                 {emailErr && <p className="mt-1 text-xs text-red-500">{emailErr}</p>}
               </div>
 

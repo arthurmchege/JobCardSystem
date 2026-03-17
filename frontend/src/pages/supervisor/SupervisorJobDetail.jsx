@@ -167,8 +167,8 @@ const SupervisorJobDetail = () => {
         </div>
       )}
 
-      {/* Payment Section - completed jobs only */}
-      {job.status === 'completed' && (
+      {/* Payment Section (if payment amount is set) */}
+      {job.payment_amount && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -176,7 +176,7 @@ const SupervisorJobDetail = () => {
               <p className="text-xs text-gray-400 mt-0.5">
                 {job.payment_status === 'paid' ? 'This job has been paid' :
                  job.payment_status === 'pending' ? 'Payment in progress...' :
-                 'No payment yet'}
+                 'Payment is due for this job'}
               </p>
             </div>
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold
@@ -188,16 +188,14 @@ const SupervisorJobDetail = () => {
             </span>
           </div>
 
-          {job.payment_amount && (
-            <div className="bg-gray-50 rounded-lg p-3 mb-4">
-              <p className="text-xs text-gray-400 mb-1">Amount Due</p>
-              <p className="text-xl font-bold text-slate-900">
-                KES {parseFloat(job.payment_amount).toLocaleString()}
-              </p>
-            </div>
-          )}
+          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+            <p className="text-xs text-gray-400 mb-1">Amount Due</p>
+            <p className="text-xl font-bold text-slate-900">
+              KES {parseFloat(job.payment_amount).toLocaleString()}
+            </p>
+          </div>
 
-          {job.payment_status !== 'paid' && job.payment_amount && (
+          {job.payment_status !== 'paid' && (
             <button
               onClick={() => setShowPaymentModal(true)}
               className="w-full flex items-center justify-center gap-2 bg-green-600

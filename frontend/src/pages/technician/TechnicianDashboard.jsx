@@ -40,7 +40,7 @@ const TechnicianDashboard = () => {
                   <Logo size="sm" className="bg-white rounded-md p-1" />
                   <div>
                     <p className="tech-title text-white text-xs font-bold tracking-wide leading-none">MY JOBS</p>
-                    <p className="text-slate-500 text-[10px]">Copy Cat Group</p>
+                    <p className="text-slate-500 text-[10px]">Job Card System</p>
                   </div>
                 </Link>
               )}
