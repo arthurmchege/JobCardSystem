@@ -23,6 +23,7 @@ const InfoRow = ({ label, value, last }) => (
 );
 
 const JobDetail = () => {
+  console.log('JobDetail rendering'); 
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();

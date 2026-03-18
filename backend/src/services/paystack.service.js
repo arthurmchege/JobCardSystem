@@ -6,6 +6,19 @@ const crypto = require('crypto');
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY;
 
+// By default, Paystack redirects the customer back to the frontend when payment is complete.
+// - In local dev with Vite (default), this is usually http://localhost:5173
+// - When using Apache/ngrok or HTTPS, set FRONTEND_URL to the public URL (e.g. https://localhost or https://abcd.ngrok.io)
+// If you need Paystack to redirect to a different host than where your frontend is served,
+// set PAYSTACK_CALLBACK_URL to a full URL (without the token). This will be used instead.
+const FRONTEND_URL = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173';
+const PAYSTACK_CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL || `${FRONTEND_URL}/pay`;
+
+const buildPaystackCallbackUrl = (token) => {
+  const base = PAYSTACK_CALLBACK_URL.replace(/\/+$/, ''); // remove trailing slashes
+  return `${base}/${token}`;
+};
+
 console.log('PAYSTACK_SECRET_KEY', PAYSTACK_SECRET_KEY ? 'Loaded' : 'Not Loaded');
 
 const generatePaymentToken = async (jobCardId) => {
@@ -112,7 +125,7 @@ const initializeTransaction = async (email, amount, jobCardId, token) => {
                 amount: amountInKobo,
                 currency: 'KES',
                 reference: `JC-${jobCardId}-${Date.now()}`, // unique reference
-                callback_url: `${process.env.FRONTEND_URL}/pay/${token}/verify`,
+                callback_url: buildPaystackCallbackUrl(token),
                 metadata: {
                     job_card_id: jobCardId,
                     token: token,
@@ -191,10 +204,11 @@ const verifyTransaction = async (reference) => {
                 [reference]
             );
 
-            console.log(`Payment verifief and recorded for job ${jobCardId}`);
+            console.log(`Payment verified and recorded for job ${jobCardId}`);
         }
 
         return {
+            paid: status === 'success',
             status,                 // 'success', 'failed', 'abandoned'
             amount: amount / 100,   // Converts back from kobo to KES
             currency,
@@ -217,10 +231,96 @@ const verifyWebhookSignature = (payload, signature) => {
         return hash === signature;
 };
 
+const resendInvoice = async (jobCardId) => {
+    try {
+        const result = await pool.query(
+            `SELECT
+                jc.*,
+                c.name as customer_name,
+                c.email as customer_email,
+                c.phone as customer_phone,
+                c.address as customer_address,
+                u.name as technician_name,
+                u.email as technician_email,
+                u.phone as technician_phone
+            FROM job_cards jc
+            JOIN customers c ON jc.customer_id = c.id
+            JOIN users u ON jc.technician_id = u.id
+            WHERE jc.id = $1`,
+            [jobCardId]
+        );
+        if (result.rows.length === 0) {
+            const err = new Error('Job card not found');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        const row = result.rows[0];
+
+        if (row.status !== 'completed') {
+            const err = new Error('Job must be completed before sending invoice');
+            err.statusCode = 400;
+            throw err;
+        }
+
+        if (!row.payment_amount) {
+            const err = new Error('Job has no payment set');
+            err.statusCode = 400;
+            throw err;
+        }
+
+        if (row.payment_status === 'paid') {
+            const err = new Error('This job has already been paid');
+            err.statusCode = 400;
+            throw err;
+        }
+
+        const token = await generatePaymentToken(row.id);
+
+        const jobCard = {
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            priority: row.priority,
+            status: row.status,
+            scheduled_date: row.scheduled_date,
+            actual_start_time: row.actual_start_time,
+            actual_end_time: row.completed_at,
+            work_performed: row.work_performed,
+            notes: row.notes,
+            payment_amount: row.payment_amount,
+            payment_status: row.payment_status,
+            customer: {
+                name: row.customer_name,
+                email: row.customer_email,
+                phone: row.customer_phone,
+                address: row.customer_address
+            },
+            technician: {
+                name: row.technician_name,
+                email: row.technician_email,
+                phone: row.technician_phone
+            }
+        };
+
+        const emailService = require('./email.service');
+        await emailService.sendJobCompletionEmailToCustomer(jobCard, token);
+
+        console.log(`✅ Invoice resent for job ${jobCardId}`);
+        return { success: true };
+
+    } catch (err) {
+        if (err.statusCode) throw err;
+        console.error('Failed to resend invoice:', err.message);
+        throw new Error('Failed to resend invoice');
+    }
+}
+
 module.exports = {
     generatePaymentToken,
     getPaymentLinkDetails,
     initializeTransaction,
     verifyTransaction,
-    verifyWebhookSignature
+    verifyWebhookSignature,
+    resendInvoice
 };

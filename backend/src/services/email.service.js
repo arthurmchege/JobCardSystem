@@ -15,10 +15,11 @@ const createTransporter = () => {
   });
 };
 
-// Base URL for links in emails - comes from environment variable
-// Development: http://localhost:5173
-// Production:  https://yourdomain.com
-const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+// Base URL for links in emails and payment callbacks (frontend URL)
+// This should point to the UI host (e.g. Vite dev server in development).
+// If your backend is on a different host/port, set FRONTEND_URL explicitly.
+const FRONTEND_URL = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173';
+const APP_URL = FRONTEND_URL; // kept for backwards compatibility
 
 // ============================================================================
 // EMAIL TEMPLATES
@@ -110,7 +111,10 @@ const getJobAssignmentEmail = (jobCard, technician) => {
             <p>Please log in to the system to view full details and start the job when ready.</p>
             
             <center>
-              <a href="${APP_URL}/technician/jobs/${jobCard.id}" class="button">View Job Details</a>
+              <a href="${APP_URL}/technician/jobs/${jobCard.id}" 
+                style="display:inline-block;padding:12px 24px;background-color:#4F46E5;color:#ffffff;text-decoration:none;border-radius:5px;font-weight:bold;font-family:Arial,sans-serif;">
+                View Job Details
+              </a>
             </center>
           </div>
           
@@ -294,6 +298,106 @@ const getCustomerCompletionEmail = (jobCard) => {
   };
 };
 
+const getCustomerInvoiceEmail = (jobCard, token) => {
+  const paymentUrl = `${APP_URL}/pay/${token}`;
+  const formattedAmount = Number(jobCard.payment_amount).toLocaleString('en-KE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  
+  return {
+    subject: `Invoice & Payment: ${jobCard.title} — KES ${formattedAmount}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
+          .content { background-color: #f9fafb; padding: 20px; margin-top: 20px; }
+          .job-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #4F46E5; }
+          .detail-row { margin: 10px 0; }
+          .label { font-weight: bold; color: #4F46E5; }
+          .amount-box {
+            background-color: #EEF2FF;
+            border: 2px solid #4F46E5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .amount-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4F46E5;
+            display: block;
+            margin: 8px 0;
+          }
+          .pay-button {
+            display: inline-block;
+            padding: 16px 40px;
+            background-color: #4F46E5;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+          }
+          .footer { text-align: center; margin-top: 30px; color: #6B7280; font-size: 12px; }
+          .secure-note { color: #6B7280; font-size: 13px; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🧾 Your Invoice is Ready</h1>
+          </div>
+          <div class="content">
+            <p>Dear <strong>${jobCard.customer.name}</strong>,</p>
+            <p>Your service has been completed. Please find your invoice below and use the button to pay securely online.</p>
+            <div class="job-details">
+              <div class="detail-row">
+                <span class="label">Service:</span> ${jobCard.title}
+              </div>
+              <div class="detail-row">
+                <span class="label">Technician:</span> ${jobCard.technician.name}
+              </div>
+              <div class="detail-row">
+                <span class="label">Completed on:</span> ${new Date(jobCard.actual_end_time).toLocaleString('en-GB')}
+              </div>
+            </div>
+            ${jobCard.work_performed ? `
+            <div class="detail-row">
+              <span class="label">Work Performed:</span>
+              <p>${jobCard.work_performed}</p>
+            </div>
+            ` : ''}
+            <div class="amount-box">
+              <span style="font-size: 14px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Amount Due</span>
+              <span class="amount-value">KES ${formattedAmount}</span>
+              <br/>
+              <a href="${paymentUrl}" class="pay-button">💳 Pay Now</a>
+              <p class="secure-note">🔒 Secure payment powered by Paystack</p>
+            </div>
+            <p>Your detailed job report is attached to this email as a PDF for your records.</p>
+            <p>If you have any questions, please contact us:<br/>
+            Phone: ${jobCard.technician.phone || 'N/A'}<br/>
+            Email: ${jobCard.technician.email}</p>
+          </div>
+          <div class="footer">
+            <p><strong>Copy Cat Group</strong></p>
+            <p>Photocopier Sales, Installation & Maintenance</p>
+            <p>Nairobi, Kenya</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+};
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -402,7 +506,7 @@ const sendJobCompletionEmailToSupervisor = async (jobCard, supervisor) => {
 /**
  * Send job completion email to customer
  */
-const sendJobCompletionEmailToCustomer = async (jobCard) => {
+const sendJobCompletionEmailToCustomer = async (jobCard, token = null) => {
   try {
     if (!jobCard.customer.email) {
       console.log('⚠️  Customer has no email address, skipping notification');
@@ -410,7 +514,9 @@ const sendJobCompletionEmailToCustomer = async (jobCard) => {
     }
 
     const transporter = createTransporter();
-    const emailTemplate = getCustomerCompletionEmail(jobCard);
+    const emailTemplate = token
+      ? getCustomerInvoiceEmail(jobCard, token)
+      : getCustomerCompletionEmail(jobCard);
 
     // Generate PDF report for the completed job
     console.log('📄 Generating PDF attachment for customer completion email...');

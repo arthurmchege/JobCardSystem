@@ -1,4 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+// By default we use a relative API path so that the frontend can be served
+// from the same host as the backend (e.g. Apache reverse proxy or ngrok).
+// Use VITE_API_URL to override (useful when running Vite dev server without proxy).
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 // Custom error class for API errors
 class APIError extends Error {
@@ -254,4 +257,34 @@ export const paymentAPI = {
   }
 };
 
-export default { authAPI, customerAPI, jobCardAPI, userAPI, paymentAPI };
+// PAYSTACK PUBLIC API
+export const paystackAPI = {
+  getPaymentDetails: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/pay/${token}`);
+    return await handleResponse(response);
+  },
+
+  initializePayment: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/pay/${token}/initialize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return await handleResponse(response);
+  },
+
+  verifyPayment: async (token, reference) => {
+    const response = await fetch(`${API_BASE_URL}/pay/${token}/verify?reference=${reference}`);
+    return await handleResponse(response);
+  },
+
+  resendInvoice: async (jobId) => {
+    const response = await fetch(`${API_BASE_URL}/pay/${jobId}/resend-invoice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return await handleResponse(response);
+  },
+
+};
+
+export default { authAPI, customerAPI, jobCardAPI, userAPI, paymentAPI, paystackAPI };

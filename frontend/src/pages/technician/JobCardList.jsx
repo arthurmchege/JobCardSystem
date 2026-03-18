@@ -124,7 +124,7 @@ const JobCardList = () => {
         {filtered.map((job, idx) => {
           const s = STATUS[job.status] || STATUS.pending;
           return (
-            <button key={job.id} onClick={() => navigate(`/technician/${job.id}`)}
+            <button key={job.id} onClick={() => navigate(`/technician/jobs/${job.id}`)}
               className="w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm
                 hover:border-amber-200 hover:shadow-md transition-all duration-150 p-4 group"
               style={{ animationDelay: `${idx * 40}ms` }}>

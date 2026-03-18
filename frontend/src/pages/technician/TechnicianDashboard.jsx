@@ -73,7 +73,7 @@ const TechnicianDashboard = () => {
         <main className="max-w-2xl mx-auto px-4 py-5">
           <Routes>
             <Route index element={<JobCardList />} />
-            <Route path=":id" element={<JobDetail />} />
+            <Route path="jobs/:id" element={<JobDetail />} />
           </Routes>
         </main>
       </div>

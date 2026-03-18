@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { jobCardAPI } from '../../services/api';
+import { jobCardAPI, paystackAPI } from '../../services/api';
 import PaymentModal from '../../components/payments/PaymentModal';
 import PaymentHistory from '../../components/payments/PaymentHistory';
 
@@ -31,6 +31,8 @@ const SupervisorJobDetail = () => {
   const [showDelete, setShowDelete] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentRefresh, setPaymentRefresh] = useState(0);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +74,19 @@ const SupervisorJobDetail = () => {
     } catch (e) {
       console.error('Error downloading PDF:', e);
       alert('Failed to download PDF: ' + e.message);
+    }
+  };
+
+  const handleResendInvoice = async () => {
+    try {
+      setResending(true);
+      setResendSuccess(false);
+      await paystackAPI.resendInvoice(id);
+      setResendSuccess(true);
+    } catch (e) {
+      alert('Failed to resend invoice: ' + e.message);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -207,6 +222,26 @@ const SupervisorJobDetail = () => {
               </svg>
               Pay via M-Pesa
             </button>
+          )}
+
+          {job.status === 'completed' && job.payment_status !== 'paid' && (
+            <div className="mt-3">
+              {resendSuccess && (
+                <p className="text-emerald-600 text-sm text-center mb-2">✅ Invoice sent to customer</p>
+              )}
+              <button
+                onClick={handleResendInvoice}
+                disabled={resending}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600
+                  hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-semibold
+                  py-2.5 rounded-xl transition-all active:scale-[0.99]">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                {resending ? 'Sending…' : 'Resend Invoice Email'}
+              </button>
+            </div>
           )}
 
           {/* Payment History */}

@@ -78,9 +78,21 @@ const handleWebhook = async (req, res) => {
     }
 };
 
+const resendInvoice = async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        await paystackService.resendInvoice(jobId);
+        res.json({ success: true, message: 'Invoice resent successfully' });
+    } catch (err) {
+        const status = err.statusCode || 500;
+        res.status(status).json({ error: err.message });
+    }
+};
+
 module.exports = {
     getPaymentDetails,
     initializePayment,
     verifyPayment,
-    handleWebhook
+    handleWebhook,
+    resendInvoice
 }

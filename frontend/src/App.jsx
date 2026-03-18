@@ -7,6 +7,7 @@ import RegisterPage       from './pages/auth/RegisterPage';
 import TechnicianDashboard from './pages/technician/TechnicianDashboard';
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
 import ProtectedRoute     from './components/auth/ProtectedRoute';
+import PaymentPage from './pages/payment/PaymentPage';
 
 function App() {
   return (
@@ -28,6 +29,8 @@ function App() {
                 <SupervisorDashboard />
               </ProtectedRoute>
             }/>
+
+            <Route path="/pay/:token" element={<PaymentPage />} />
 
             <Route path="/" element={<Navigate to="/login" replace />} />
 

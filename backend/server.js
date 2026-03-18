@@ -67,6 +67,9 @@ const getCorsOptions = () => {
 app.set('trust proxy', 1)
 app.use(helmet());
 app.use(cors(getCorsOptions()));
+app.post('/api/v1/webhook', express.raw({ type: 'application/json' }),
+  require('./src/controllers/paystack.controller').handleWebhook
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
