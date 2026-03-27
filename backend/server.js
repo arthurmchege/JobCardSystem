@@ -1,27 +1,31 @@
 // Load environment variables at the start
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const helmet = require('helmet');
-const cors = require('cors');
-const pool = require('./src/config/database');
+require("dotenv").config();
+const express = require("express");
+const http = require("http");
+const helmet = require("helmet");
+const cors = require("cors");
+const pool = require("./src/config/database");
+const cookieParser = require("cookie-parser");
 
 // Import rate limiters
-const { apiLimiter, authLimiter, createLimiter } = require('./src/middleware/rateLimiter');
+const {
+  apiLimiter,
+  authLimiter,
+  createLimiter,
+} = require("./src/middleware/rateLimiter");
 
 // Import routes
-const authRoutes = require('./src/routes/auth.routes');
-const userRoutes = require('./src/routes/user.routes');
-const customerRoutes = require('./src/routes/customer.routes');
-const jobCardRoutes = require('./src/routes/jobCard.routes');
-const paymentRoutes = require('./src/routes/payment.routes')
-const paystackRoutes = require('./src/routes/paystack.routes')
+const authRoutes = require("./src/routes/auth.routes");
+const userRoutes = require("./src/routes/user.routes");
+const customerRoutes = require("./src/routes/customer.routes");
+const jobCardRoutes = require("./src/routes/jobCard.routes");
+const paymentRoutes = require("./src/routes/payment.routes");
+const paystackRoutes = require("./src/routes/paystack.routes");
 
-console.log('✅ All routes imported successfully');
+console.log("✅ All routes imported successfully");
 
 // Initialize express app
 const app = express();
-
 
 // Get Port
 const PORT = process.env.PORT || 5000;
@@ -32,12 +36,8 @@ const PORT = process.env.PORT || 5000;
 
 const getCorsOptions = () => {
   const allowedOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-    : [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://localhost',
-      ];
+    ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+    : ["http://localhost:5173", "http://localhost:3000", "http://localhost"];
 
   return {
     origin: function (origin, callback) {
@@ -47,16 +47,26 @@ const getCorsOptions = () => {
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`CORS blocked request from unauthorized origin: ${origin}`);
-        callback(new Error('Not allowed by CORS policy'));
+        console.warn(
+          `CORS blocked request from unauthorized origin: ${origin}`,
+        );
+        callback(new Error("Not allowed by CORS policy"));
       }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires'],
-    exposedHeaders: ['Content-Length', 'Content-Type', 'Authorization'],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept",
+      "X-Requested-With",
+      "Cache-Control",
+      "Pragma",
+      "Expires",
+    ],
+    exposedHeaders: ["Content-Length", "Content-Type", "Authorization"],
     maxAge: 86400,
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
   };
 };
 
@@ -64,14 +74,17 @@ const getCorsOptions = () => {
 // MIDDLEWARE
 // ============================================================================
 
-app.set('trust proxy', 1)
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors(getCorsOptions()));
-app.post('/api/v1/webhook', express.raw({ type: 'application/json' }),
-  require('./src/controllers/paystack.controller').handleWebhook
+app.post(
+  "/api/v1/webhook",
+  express.raw({ type: "application/json" }),
+  require("./src/controllers/paystack.controller").handleWebhook,
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Request logger
 app.use((req, res, next) => {
@@ -80,57 +93,57 @@ app.use((req, res, next) => {
 });
 
 // General rate limiting
-app.use('/api/v1', apiLimiter);
+app.use("/api/v1", apiLimiter);
 
 // ============================================================================
 // HEALTH CHECK ROUTES
 // ============================================================================
 
-app.get('/api/v1/health', (req, res) => {
+app.get("/api/v1/health", (req, res) => {
   res.json({
     success: true,
-    message: 'Job Card API is running',
+    message: "Job Card API is running",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env.NODE_ENV || "development",
     protocol: req.protocol,
   });
 });
 
-app.get('/api/v1/db-test', async (req, res) => {
+app.get("/api/v1/db-test", async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT NOW() as current_time, current_database() as database'
+      "SELECT NOW() as current_time, current_database() as database",
     );
     res.json({
       success: true,
-      message: 'Database connection successful',
+      message: "Database connection successful",
       data: {
         currentTime: result.rows[0].current_time,
-        database: result.rows[0].database
-      }
+        database: result.rows[0].database,
+      },
     });
   } catch (error) {
-    console.error('Database test error:', error);
+    console.error("Database test error:", error);
     res.status(500).json({
       success: false,
-      error: 'Database connection failed',
-      message: error.message
+      error: "Database connection failed",
+      message: error.message,
     });
   }
 });
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: 'Job Card API',
-    version: '1.0.0',
+    message: "Job Card API",
+    version: "1.0.0",
     endpoints: {
-      health: '/api/v1/health',
-      auth: '/api/v1/auth',
-      users: '/api/v1/users',
-      customers: '/api/v1/customers',
-      jobCards: '/api/v1/job-cards'
-    }
+      health: "/api/v1/health",
+      auth: "/api/v1/auth",
+      users: "/api/v1/users",
+      customers: "/api/v1/customers",
+      jobCards: "/api/v1/job-cards",
+    },
   });
 });
 
@@ -138,12 +151,12 @@ app.get('/', (req, res) => {
 // API ROUTES
 // ============================================================================
 
-app.use('/api/v1/auth', authLimiter, authRoutes);
-app.use('/api/v1/users', createLimiter, userRoutes);
-app.use('/api/v1/customers', createLimiter, customerRoutes);
-app.use('/api/v1/job-cards', createLimiter, jobCardRoutes);
-app.use('/api/v1/payments', createLimiter, paymentRoutes);
-app.use('/api/v1/', paystackRoutes)
+app.use("/api/v1/auth", authLimiter, authRoutes);
+app.use("/api/v1/users", createLimiter, userRoutes);
+app.use("/api/v1/customers", createLimiter, customerRoutes);
+app.use("/api/v1/job-cards", createLimiter, jobCardRoutes);
+app.use("/api/v1/payments", createLimiter, paymentRoutes);
+app.use("/api/v1/", paystackRoutes);
 
 // ============================================================================
 // ERROR HANDLERS
@@ -152,17 +165,17 @@ app.use('/api/v1/', paystackRoutes)
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    error: 'Route not found',
-    path: req.path
+    error: "Route not found",
+    path: req.path,
   });
 });
 
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error("Unhandled error:", err);
   res.status(err.statusCode || 500).json({
     success: false,
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    error: err.message || "Internal server error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 
@@ -173,21 +186,22 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app);
 
 server.listen(PORT, () => {
-  console.log('========================================');
+  console.log("========================================");
   console.log(`🚀 HTTP Server running`);
   console.log(`📍 URL: http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`💚 Health: http://localhost:${PORT}/api/v1/health`);
-  console.log('========================================');
+  console.log("========================================");
 });
 
 // ============================================================================
 // DATABASE CONNECTION
 // ============================================================================
 
-pool.connect()
-  .then(() => console.log('✅ Database connected successfully'))
-  .catch(err => console.error('❌ Database connection error:', err));
+pool
+  .connect()
+  .then(() => console.log("✅ Database connected successfully"))
+  .catch((err) => console.error("❌ Database connection error:", err));
 
 // Prevent process from exiting
 process.stdin.resume();
@@ -200,31 +214,31 @@ const gracefulShutdown = (signal) => {
   console.log(`\n${signal} received, shutting down gracefully...`);
 
   server.close(() => {
-    console.log('✅ Server closed');
+    console.log("✅ Server closed");
     pool.end(() => {
-      console.log('✅ Database pool closed');
-      console.log('👋 Goodbye!');
+      console.log("✅ Database pool closed");
+      console.log("👋 Goodbye!");
       process.exit(0);
     });
   });
 
   setTimeout(() => {
-    console.error('❌ Forced shutdown after timeout');
+    console.error("❌ Forced shutdown after timeout");
     process.exit(1);
   }, 10000);
 };
 
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
-process.on('uncaughtException', (err) => {
-  console.error('❌ UNCAUGHT EXCEPTION:', err);
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
+process.on("uncaughtException", (err) => {
+  console.error("❌ UNCAUGHT EXCEPTION:", err);
+  gracefulShutdown("UNCAUGHT_EXCEPTION");
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ UNHANDLED REJECTION at:', promise, 'reason:', reason);
-  gracefulShutdown('UNHANDLED_REJECTION');
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ UNHANDLED REJECTION at:", promise, "reason:", reason);
+  gracefulShutdown("UNHANDLED_REJECTION");
 });
 
 module.exports = app;

@@ -3,8 +3,8 @@
 // Redirects to login if not authenticated.
 // Redirects to correct dashboard if wrong role.
 
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
@@ -26,18 +26,15 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!localStorage.getItem('token')){
-    return <Navigate to="/login" replace/>
-  }
   // If a specific role is required, check if user has it
   if (requiredRole && user.role !== requiredRole) {
     // User doesn't have the required role
     // Redirect them to their appropriate dashboard
-    const redirectPath = user.role === 'supervisor' ? '/supervisor' : '/technician';
+    const redirectPath =
+      user.role === "supervisor" ? "/supervisor" : "/technician";
     return <Navigate to={redirectPath} replace />;
   }
 
-  
   // User is authenticated and has correct role (if required)
   // Render the protected content
   return children;

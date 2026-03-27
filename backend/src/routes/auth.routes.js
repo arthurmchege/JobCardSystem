@@ -1,12 +1,12 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/auth.controller');
-const authenticate = require('../middleware/authenticate');
-const validateRequest = require('../middleware/validateRequest');
-const { registerSchema, loginSchema } = require('../validators/auth.validator');
-const { sanitizeMiddleware } = require('../utils/sanitize');
+const authController = require("../controllers/auth.controller");
+const authenticate = require("../middleware/authenticate");
+const validateRequest = require("../middleware/validateRequest");
+const { registerSchema, loginSchema } = require("../validators/auth.validator");
+const { sanitizeMiddleware } = require("../utils/sanitize");
 
-console.log('✅ Auth routes file loaded successfully');
+console.log("✅ Auth routes file loaded successfully");
 
 // ============================================================================
 // APPLY SANITIZATION FIRST (BEFORE ANY ROUTES)
@@ -15,35 +15,22 @@ router.use(sanitizeMiddleware);
 
 // Register a user
 // POST /api/v1/auth/register
-router.post('/register',
+router.post(
+  "/register",
   validateRequest(registerSchema),
-  authController.register
+  authController.register,
 );
 
 // Login a user
 // POST /api/v1/auth/login
-router.post('/login',
-  validateRequest(loginSchema),
-  authController.login
-);
+router.post("/login", validateRequest(loginSchema), authController.login);
 
 // Get current Logged in user's profile
-// GET /api/v1/auth/me  
-router.get('/me',
-  authenticate,
-  authController.getCurrentUser
-);
+// GET /api/v1/auth/me
+router.get("/me", authenticate, authController.getCurrentUser);
 
 // Log out user
 // POST /api/v1/auth/logout
-router.post('/logout',
-  authenticate,
-  (req, res) => {
-    res.json({
-      success: true,
-      message: 'Logout successful.'
-    });
-  }
-);
+router.post("/logout", authenticate, authController.logout);
 
 module.exports = router;
