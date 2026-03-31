@@ -32,7 +32,7 @@ const registerUser = async( userData ) => {
   return result.rows[0];
 };
 
-// Login user and generate token
+// Login user and generate tokenq
 const loginUser = async (email, password) => {
     // Find user by email
     const result = await pool.query(

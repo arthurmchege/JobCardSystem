@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+docker
+psutil
+python-dotenv
+pydantic-settings
+aiosmtplib
+websockets
+email-validator

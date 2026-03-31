@@ -12,7 +12,6 @@ const PASSKEY = process.env.MPESA_PASSKEY;
 const CALLBACK_URL = process.env.MPESA_CALLBACK_URL;
 
 
-// CORE FUNCTIONS
 // Getting a fresh access token from Safaricom that expires in one hour
 
 const getAccessToken = async () => {
