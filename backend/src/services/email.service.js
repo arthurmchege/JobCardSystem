@@ -387,7 +387,7 @@ const getCustomerInvoiceEmail = (jobCard, token) => {
             Email: ${jobCard.technician.email}</p>
           </div>
           <div class="footer">
-            <p><strong>Copy Cat Group</strong></p>
+            <p><strong>Job Card System</strong></p>
             <p>Photocopier Sales, Installation & Maintenance</p>
             <p>Nairobi, Kenya</p>
           </div>
