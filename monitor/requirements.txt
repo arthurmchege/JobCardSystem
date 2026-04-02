@@ -7,3 +7,4 @@ pydantic-settings
 aiosmtplib
 websockets
 email-validator
+httpx

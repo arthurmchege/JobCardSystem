@@ -13,8 +13,10 @@ class Settings (BaseSettings):
   email_host: str = "smtp.gmail.com"
   email_port: int = 587
 
-  # How often to poll docker for updates (in sseconds)
+  # How often to poll docker for updates (in seconds)
   poll_interval: int = 5
+  express_backend_url: str
+  database_url: str
 
   class Config:
     env_file = ".env"
