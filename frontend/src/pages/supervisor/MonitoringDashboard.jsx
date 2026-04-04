@@ -65,10 +65,7 @@ const Gauge = ({ value, label, color }) => {
 const ContainerRow = ({ c }) => {
   const running = c.status === "running";
   return (
-    <div
-      className="flex items-center justify-between px-4 py-3 border-b border-slate-800/60 last:border-0
-      hover:bg-slate-800/30 transition-colors group"
-    >
+    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30 transition-colors group">
       <div className="flex items-center gap-3 min-w-0">
         <span
           className={`h-2 w-2 rounded-full shrink-0 ${running ? "bg-emerald-400" : "bg-red-400"}`}
@@ -80,8 +77,7 @@ const ContainerRow = ({ c }) => {
       </div>
       <div className="flex items-center gap-6 shrink-0 text-xs text-slate-400">
         <span
-          className={`px-2 py-0.5 rounded-full font-semibold text-[10px] uppercase
-          ${running ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/50 text-red-400"}`}
+          className={`px-2 py-0.5 rounded-full font-semibold text-[10px] uppercase ${running ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/50 text-red-400"}`}
         >
           {c.status}
         </span>
@@ -94,11 +90,91 @@ const ContainerRow = ({ c }) => {
   );
 };
 
+// ─── Backend Health Panel ────────────────────────────────────────────────────
+const BackendHealthPanel = ({ summary }) => {
+  if (!summary) {
+    return (
+      <div className="flex justify-center py-6">
+        <svg
+          className="h-6 w-6 animate-spin text-slate-600"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  const healthy = summary.current_status === "healthy";
+
+  return (
+    <div className="flex flex-wrap items-center gap-6 p-2">
+      {/* Status pill */}
+      <div className="flex flex-col items-center gap-1.5">
+        <div
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
+          ${healthy ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/50 text-red-400"}`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${healthy ? "bg-emerald-400" : "bg-red-400"}`}
+            style={healthy ? { boxShadow: "0 0 5px #34d399" } : {}}
+          />
+          {summary.current_status}
+        </div>
+        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+          Status
+        </span>
+      </div>
+
+      {/* Uptime gauge */}
+      <Gauge value={summary.uptime_percent} label="Uptime" color="#6366f1" />
+
+      {/* Stats */}
+      <div className="space-y-2 text-xs text-slate-400 min-w-[160px]">
+        <div className="flex justify-between gap-4">
+          <span>Avg response</span>
+          <span className="text-slate-200 font-mono">
+            {summary.avg_response_time_ms
+              ? `${Math.round(summary.avg_response_time_ms)} ms`
+              : "—"}
+          </span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span>Last checked</span>
+          <span className="text-slate-200 font-mono">
+            {fmtAgo(summary.last_checked)}
+          </span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span>Uptime</span>
+          <span className="text-slate-200 font-mono">
+            {summary.uptime_percent}%
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main component ──────────────────────────────────────────────────────────
 const MonitoringDashboard = () => {
   const [containers, setContainers] = useState([]);
   const [system, setSystem] = useState(null);
-  const [wsStatus, setWsStatus] = useState("connecting"); // connecting | live | error
+  const [summary, setSummary] = useState(null);
+  const [wsStatus, setWsStatus] = useState("connecting");
   const [lastUpdate, setLastUpdate] = useState(null);
   const wsRef = useRef(null);
 
@@ -107,13 +183,9 @@ const MonitoringDashboard = () => {
     const connect = () => {
       const ws = new WebSocket("wss://localhost/monitor/ws");
       wsRef.current = ws;
-
       ws.onopen = () => setWsStatus("live");
       ws.onerror = () => setWsStatus("error");
-      ws.onclose = () => {
-        setWsStatus("error");
-      };
-
+      ws.onclose = () => setWsStatus("error");
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -124,7 +196,6 @@ const MonitoringDashboard = () => {
         }
       };
     };
-
     connect();
     return () => wsRef.current?.close();
   }, []);
@@ -145,6 +216,22 @@ const MonitoringDashboard = () => {
     return () => clearInterval(id);
   }, []);
 
+  // ── HTTP poll for backend health summary (every 30s) ──
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch("/monitor/summary");
+        const data = await res.json();
+        setSummary(data);
+      } catch {
+        /* monitor might be briefly down */
+      }
+    };
+    fetchSummary();
+    const id = setInterval(fetchSummary, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const runningCount = containers.filter((c) => c.status === "running").length;
 
   return (
@@ -161,13 +248,7 @@ const MonitoringDashboard = () => {
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full ${
-              wsStatus === "live"
-                ? "bg-emerald-400"
-                : wsStatus === "connecting"
-                  ? "bg-amber-400 animate-pulse"
-                  : "bg-red-400"
-            }`}
+            className={`h-2 w-2 rounded-full ${wsStatus === "live" ? "bg-emerald-400" : wsStatus === "connecting" ? "bg-amber-400 animate-pulse" : "bg-red-400"}`}
           />
           <span className="text-xs font-medium text-gray-400">
             {wsStatus === "live"
@@ -206,8 +287,6 @@ const MonitoringDashboard = () => {
               label="Disk"
               color="#10b981"
             />
-
-            {/* Text details */}
             <div className="space-y-2 text-xs text-slate-400 min-w-[140px]">
               <div className="flex justify-between gap-4">
                 <span>RAM used</span>
@@ -249,7 +328,7 @@ const MonitoringDashboard = () => {
       </div>
 
       {/* ── Containers ── */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden mb-5">
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-800">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
             Docker Containers
@@ -259,7 +338,6 @@ const MonitoringDashboard = () => {
             <span> / {containers.length} running</span>
           </span>
         </div>
-
         {containers.length === 0 ? (
           <div className="py-10 text-center text-slate-600 text-sm">
             {wsStatus === "connecting"
@@ -269,6 +347,21 @@ const MonitoringDashboard = () => {
         ) : (
           containers.map((c) => <ContainerRow key={c.name} c={c} />)
         )}
+      </div>
+
+      {/* ── Backend Health ── */}
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-800">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Backend Health
+          </p>
+          {summary && (
+            <span className="text-xs text-slate-500">Refreshes every 30s</span>
+          )}
+        </div>
+        <div className="px-4 py-4">
+          <BackendHealthPanel summary={summary} />
+        </div>
       </div>
     </div>
   );
