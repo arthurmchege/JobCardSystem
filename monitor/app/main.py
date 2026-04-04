@@ -7,6 +7,7 @@ from app.websocket_manager import manager
 import asyncio
 from app.health_checker import health_check_loop
 from app.database import init_db
+from app.summary import get_monitoring_summary
 @asynccontextmanager
 async def lifespan(app):
     await init_db()
@@ -21,6 +22,7 @@ async def health_check():
 
 @app.get("/docker-status")
 async def docker_status():
+  
   status = get_docker_status()
   return status
 
@@ -41,3 +43,7 @@ async def websocket_endpoint(websocket: WebSocket):
   except:
     manager.disconnect(websocket)
 
+@app.get("/summary")
+async def monitoring_summary():
+   summary = await get_monitoring_summary()
+   return summary
