@@ -1,19 +1,23 @@
-const pool = require('../config/database');
-const { hashPassword, comparePassword, generateToken } = require('../utils/authHelpers');
+const pool = require("../config/database");
+const { logEvent } = require("../services/activityLogger.service");
+const {
+  hashPassword,
+  comparePassword,
+  generateToken,
+} = require("../utils/authHelpers");
 
 // Register a new user
 
-const registerUser = async( userData ) => {
+const registerUser = async (userData) => {
   const { name, email, password, role, phone } = userData;
 
   // Check if email already exists
-  const emailCheck = await pool.query(
-    'SELECT id FROM users WHERE email = $1',
-    [email]
-  );
+  const emailCheck = await pool.query("SELECT id FROM users WHERE email = $1", [
+    email,
+  ]);
 
   if (emailCheck.rows.length > 0) {
-    const error = new Error('Email already registered');
+    const error = new Error("Email already registered");
     error.statusCode = 409;
     throw error;
   }
@@ -26,7 +30,7 @@ const registerUser = async( userData ) => {
     `INSERT INTO users (name, email, password, role, phone)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, email, role, phone, created_at`,
-    [name, email, passwordHash, role, phone || null]
+    [name, email, passwordHash, role, phone || null],
   );
 
   return result.rows[0];
@@ -34,35 +38,38 @@ const registerUser = async( userData ) => {
 
 // Login user and generate tokenq
 const loginUser = async (email, password) => {
-    // Find user by email
-    const result = await pool.query(
-      'SELECT id, name, email, password, role, phone FROM users WHERE email = $1',
-      [email]
-    );
-    
-    if (result.rows.length === 0) {
-      const error = new Error('Invalid email or password');
-      error.statusCode = 401; // Unauthorized
-      throw error;
-    }
+  // Find user by email
+  const result = await pool.query(
+    "SELECT id, name, email, password, role, phone FROM users WHERE email = $1",
+    [email],
+  );
 
-    const user = result.rows[0];
+  if (result.rows.length === 0) {
+    await logEvent("login_failed", null, { email, reason: "user not found" });
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401; // Unauthorized
+    throw error;
+  }
 
-    // Compared user with hash
-    const isPasswordValid = await comparePassword(password, user.password);
+  const user = result.rows[0];
 
-    if (!isPasswordValid) {
-      const error = new Error('Invalid email or password');
-      error.statusCode = 401;
-      throw error;
-    }
+  // Compared user with hash
+  const isPasswordValid = await comparePassword(password, user.password);
+
+  if (!isPasswordValid) {
+    await logEvent("login_failed", null, { email, reason: "invalid password" });
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
+  }
 
   // Generate JWT token
   const token = generateToken({
     userId: user.id,
     email: user.email,
-    role: user.role
+    role: user.role,
   });
+  await logEvent("user_login", user.id, { email: user.email });
 
   // Return token and user data (without password hash)
   return {
@@ -72,23 +79,23 @@ const loginUser = async (email, password) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      phone: user.phone
-    }
+      phone: user.phone,
+    },
   };
 };
 
 // Get user by ID
 const getUserById = async (userId) => {
-    const result = await pool.query(
-      'SELECT id, name, email, role, phone, created_at FROM users WHERE id = $1',
-      [userId]
-    );
+  const result = await pool.query(
+    "SELECT id, name, email, role, phone, created_at FROM users WHERE id = $1",
+    [userId],
+  );
 
-    if (result.rows.length === 0) {
-      const error = new Error('User not found');
-      error.statusCode = 404;
-      throw error;
-    }
+  if (result.rows.length === 0) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
 
   return result.rows[0];
 };
