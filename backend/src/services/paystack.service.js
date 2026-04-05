@@ -207,15 +207,15 @@ const verifyTransaction = async (reference) => {
         [reference],
       );
 
+      await logEvent("payment_verified", null, {
+        job_card_id: jobCardId,
+        status,
+        amount: amount / 100,
+        currency,
+      });
+
       console.log(`Payment verified and recorded for job ${jobCardId}`);
     }
-
-    await logEvent("payment_verified", null, {
-      job_card_id: { jobCardId },
-      status,
-      amount,
-      currency,
-    });
 
     return {
       paid: status === "success",
