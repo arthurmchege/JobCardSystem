@@ -8,6 +8,7 @@ import asyncio
 from app.health_checker import health_check_loop
 from app.database import init_db
 from app.summary import get_monitoring_summary
+from app.activity_logs import get_activity_logs
 @asynccontextmanager
 async def lifespan(app):
     await init_db()
@@ -47,3 +48,8 @@ async def websocket_endpoint(websocket: WebSocket):
 async def monitoring_summary():
    summary = await get_monitoring_summary()
    return summary
+
+@app.get("/activity-logs")
+async def activity_logs():
+   logs = await get_activity_logs()
+   return logs
