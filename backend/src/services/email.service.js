@@ -1,24 +1,26 @@
 // Email notification service using Nodemailer with PDF attachments
-const nodemailer = require('nodemailer');
-const { generateJobCardPDFBuffer } = require('../utils/pdfGenerator');
+const nodemailer = require("nodemailer");
+const { generateJobCardPDFBuffer } = require("../utils/pdfGenerator");
+const { logEvent } = require("../services/activityLogger.service");
 
 // Creating email transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT),
-    secure: process.env.EMAIL_SECURE === 'true', // false for port 587
+    secure: process.env.EMAIL_SECURE === "true", // false for port 587
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
+      pass: process.env.EMAIL_PASSWORD,
+    },
   });
 };
 
 // Base URL for links in emails and payment callbacks (frontend URL)
 // This should point to the UI host (e.g. Vite dev server in development).
 // If your backend is on a different host/port, set FRONTEND_URL explicitly.
-const FRONTEND_URL = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173';
+const FRONTEND_URL =
+  process.env.FRONTEND_URL || process.env.APP_URL || "http://localhost:5173";
 const APP_URL = FRONTEND_URL; // kept for backwards compatibility
 
 // ============================================================================
@@ -88,17 +90,21 @@ const getJobAssignmentEmail = (jobCard, technician) => {
                 <span class="label">Contact:</span> ${jobCard.customer.phone}
               </div>
               <div class="detail-row">
-                <span class="label">Scheduled Date:</span> ${new Date(jobCard.scheduled_date).toLocaleDateString('en-GB')}
+                <span class="label">Scheduled Date:</span> ${new Date(jobCard.scheduled_date).toLocaleDateString("en-GB")}
               </div>
               <div class="detail-row">
                 <span class="label">Priority:</span> <span style="color: ${getPriorityColor(jobCard.priority)}; font-weight: bold;">${jobCard.priority.toUpperCase()}</span>
               </div>
-              ${jobCard.description ? `
+              ${
+                jobCard.description
+                  ? `
               <div class="detail-row">
                 <span class="label">Description:</span><br/>
                 ${jobCard.description}
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
             </div>
             
             <div class="attachment-notice">
@@ -125,7 +131,7 @@ const getJobAssignmentEmail = (jobCard, technician) => {
         </div>
       </body>
       </html>
-    `
+    `,
   };
 };
 
@@ -182,22 +188,30 @@ const getJobCompletionEmail = (jobCard, supervisor) => {
                 <span class="label">Technician:</span> ${jobCard.technician.name}
               </div>
               <div class="detail-row">
-                <span class="label">Completed:</span> ${new Date(jobCard.actual_end_time).toLocaleString('en-GB')}
+                <span class="label">Completed:</span> ${new Date(jobCard.actual_end_time).toLocaleString("en-GB")}
               </div>
             </div>
             
-            ${jobCard.work_performed ? `
+            ${
+              jobCard.work_performed
+                ? `
             <div class="work-performed">
               <div class="label">Work Performed:</div>
               <p>${jobCard.work_performed}</p>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
-            ${jobCard.notes ? `
+            ${
+              jobCard.notes
+                ? `
             <div class="detail-row">
               <span class="label">Notes:</span> ${jobCard.notes}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <p>You can download the PDF report or view full details in the system.</p>
             
@@ -212,7 +226,7 @@ const getJobCompletionEmail = (jobCard, supervisor) => {
         </div>
       </body>
       </html>
-    `
+    `,
   };
 };
 
@@ -258,21 +272,29 @@ const getCustomerCompletionEmail = (jobCard) => {
                 <span class="label">Technician:</span> ${jobCard.technician.name}
               </div>
               <div class="detail-row">
-                <span class="label">Completed on:</span> ${new Date(jobCard.actual_end_time).toLocaleString('en-GB')}
+                <span class="label">Completed on:</span> ${new Date(jobCard.actual_end_time).toLocaleString("en-GB")}
               </div>
-              ${jobCard.payment_amount ? `
+              ${
+                jobCard.payment_amount
+                  ? `
               <div class="detail-row">
-                <span class="label">Amount Due:</span> KES ${Number(jobCard.payment_amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span class="label">Amount Due:</span> KES ${Number(jobCard.payment_amount).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
             </div>
             
-            ${jobCard.work_performed ? `
+            ${
+              jobCard.work_performed
+                ? `
             <div class="detail-row">
               <span class="label">Work Performed:</span><br/>
               <p>${jobCard.work_performed}</p>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <div class="thank-you">
               <h2>Thank You for Choosing Our Service!</h2>
@@ -282,7 +304,7 @@ const getCustomerCompletionEmail = (jobCard) => {
             <p>If you have any questions or concerns about the service provided, please don't hesitate to contact us.</p>
             
             <p><strong>Contact Information:</strong><br/>
-            Phone: ${jobCard.technician.phone || 'N/A'}<br/>
+            Phone: ${jobCard.technician.phone || "N/A"}<br/>
             Email: ${jobCard.technician.email}</p>
           </div>
           
@@ -294,17 +316,20 @@ const getCustomerCompletionEmail = (jobCard) => {
         </div>
       </body>
       </html>
-    `
+    `,
   };
 };
 
 const getCustomerInvoiceEmail = (jobCard, token) => {
   const paymentUrl = `${APP_URL}/pay/${token}`;
-  const formattedAmount = Number(jobCard.payment_amount).toLocaleString('en-KE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-  
+  const formattedAmount = Number(jobCard.payment_amount).toLocaleString(
+    "en-KE",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  );
+
   return {
     subject: `Invoice & Payment: ${jobCard.title} — KES ${formattedAmount}`,
     html: `
@@ -365,15 +390,19 @@ const getCustomerInvoiceEmail = (jobCard, token) => {
                 <span class="label">Technician:</span> ${jobCard.technician.name}
               </div>
               <div class="detail-row">
-                <span class="label">Completed on:</span> ${new Date(jobCard.actual_end_time).toLocaleString('en-GB')}
+                <span class="label">Completed on:</span> ${new Date(jobCard.actual_end_time).toLocaleString("en-GB")}
               </div>
             </div>
-            ${jobCard.work_performed ? `
+            ${
+              jobCard.work_performed
+                ? `
             <div class="detail-row">
               <span class="label">Work Performed:</span>
               <p>${jobCard.work_performed}</p>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             <div class="amount-box">
               <span style="font-size: 14px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Amount Due</span>
               <span class="amount-value">KES ${formattedAmount}</span>
@@ -383,7 +412,7 @@ const getCustomerInvoiceEmail = (jobCard, token) => {
             </div>
             <p>Your detailed job report is attached to this email as a PDF for your records.</p>
             <p>If you have any questions, please contact us:<br/>
-            Phone: ${jobCard.technician.phone || 'N/A'}<br/>
+            Phone: ${jobCard.technician.phone || "N/A"}<br/>
             Email: ${jobCard.technician.email}</p>
           </div>
           <div class="footer">
@@ -394,7 +423,7 @@ const getCustomerInvoiceEmail = (jobCard, token) => {
         </div>
       </body>
       </html>
-    `
+    `,
   };
 };
 
@@ -404,12 +433,12 @@ const getCustomerInvoiceEmail = (jobCard, token) => {
 
 const getPriorityColor = (priority) => {
   const colors = {
-    low: '#10B981',
-    medium: '#F59E0B',
-    high: '#EF4444',
-    urgent: '#DC2626'
+    low: "#10B981",
+    medium: "#F59E0B",
+    high: "#EF4444",
+    urgent: "#DC2626",
   };
-  return colors[priority] || '#6B7280';
+  return colors[priority] || "#6B7280";
 };
 
 // ============================================================================
@@ -422,26 +451,26 @@ const getPriorityColor = (priority) => {
 const sendJobAssignmentEmail = async (jobCard, technician) => {
   try {
     if (!technician.email) {
-      console.log('⚠️  Technician has no email address, skipping notification');
-      return { success: false, reason: 'No email address' };
+      console.log("⚠️  Technician has no email address, skipping notification");
+      return { success: false, reason: "No email address" };
     }
 
     const transporter = createTransporter();
     const emailTemplate = getJobAssignmentEmail(jobCard, technician);
 
     // Generate PDF attachment as buffer
-    console.log('📄 Generating PDF attachment for job assignment email...');
+    console.log("📄 Generating PDF attachment for job assignment email...");
     const pdfBuffer = await generateJobCardPDFBuffer(jobCard);
     console.log(`✅ PDF generated: ${pdfBuffer.length} bytes`);
     // Buffer? - A binary data stored in memory like Blob but in node.js
 
     // Create safe filename (sanitize title)
     const safeTitle = jobCard.title
-      .replace(/[^a-z0-9]/gi, '-')  // Replace non-alphanumeric with dash
-      .replace(/-+/g, '-')           // Replace multiple dashes with single
-      .replace(/^-|-$/g, '')         // Remove leading/trailing dashes
-      .substring(0, 50);             // Limit length
-    
+      .replace(/[^a-z0-9]/gi, "-") // Replace non-alphanumeric with dash
+      .replace(/-+/g, "-") // Replace multiple dashes with single
+      .replace(/^-|-$/g, "") // Remove leading/trailing dashes
+      .substring(0, 50); // Limit length
+
     const filename = `job-${jobCard.id.substring(0, 8)}-${safeTitle}.pdf`;
 
     // Create email options with pdf attachment
@@ -450,26 +479,33 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
       to: technician.email,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
-      
+
       // Attach the PDF as an attachment
       attachments: [
         {
           filename: filename,
           content: pdfBuffer,
-          contentType: 'application/pdf'
-        }
-      ]
+          contentType: "application/pdf",
+        },
+      ],
     };
 
     // Email is sent with attachment
     const info = await transporter.sendMail(mailOptions);
-    
-    console.log('✅ Job assignment email sent with PDF attachment:', info.messageId);
+    await logEvent("job_assignment_email_sent", null, {
+      job_card_id: jobCard.id,
+      technician_id: technician.id,
+      email: technician.email,
+    });
+
+    console.log(
+      "✅ Job assignment email sent with PDF attachment:",
+      info.messageId,
+    );
     console.log(`   📎 Attachment: ${filename}`);
     return { success: true, messageId: info.messageId };
-    
   } catch (error) {
-    console.error('❌ Failed to send job assignment email:', error);
+    console.error("❌ Failed to send job assignment email:", error);
     return { success: false, error: error.message };
   }
 };
@@ -480,8 +516,8 @@ const sendJobAssignmentEmail = async (jobCard, technician) => {
 const sendJobCompletionEmailToSupervisor = async (jobCard, supervisor) => {
   try {
     if (!supervisor.email) {
-      console.log('⚠️  Supervisor has no email address, skipping notification');
-      return { success: false, reason: 'No email address' };
+      console.log("⚠️  Supervisor has no email address, skipping notification");
+      return { success: false, reason: "No email address" };
     }
 
     const transporter = createTransporter();
@@ -491,14 +527,17 @@ const sendJobCompletionEmailToSupervisor = async (jobCard, supervisor) => {
       from: process.env.EMAIL_FROM,
       to: supervisor.email,
       subject: emailTemplate.subject,
-      html: emailTemplate.html
+      html: emailTemplate.html,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Job completion email sent to supervisor:', info.messageId);
+    console.log("✅ Job completion email sent to supervisor:", info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Failed to send job completion email to supervisor:', error);
+    console.error(
+      "❌ Failed to send job completion email to supervisor:",
+      error,
+    );
     return { success: false, error: error.message };
   }
 };
@@ -509,8 +548,8 @@ const sendJobCompletionEmailToSupervisor = async (jobCard, supervisor) => {
 const sendJobCompletionEmailToCustomer = async (jobCard, token = null) => {
   try {
     if (!jobCard.customer.email) {
-      console.log('⚠️  Customer has no email address, skipping notification');
-      return { success: false, reason: 'No email address' };
+      console.log("⚠️  Customer has no email address, skipping notification");
+      return { success: false, reason: "No email address" };
     }
 
     const transporter = createTransporter();
@@ -519,13 +558,15 @@ const sendJobCompletionEmailToCustomer = async (jobCard, token = null) => {
       : getCustomerCompletionEmail(jobCard);
 
     // Generate PDF report for the completed job
-    console.log('📄 Generating PDF attachment for customer completion email...');
+    console.log(
+      "📄 Generating PDF attachment for customer completion email...",
+    );
     const pdfBuffer = await generateJobCardPDFBuffer(jobCard);
 
     const safeTitle = jobCard.title
-      .replace(/[^a-z0-9]/gi, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+      .replace(/[^a-z0-9]/gi, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
       .substring(0, 50);
 
     const filename = `job-${jobCard.id.substring(0, 8)}-${safeTitle}.pdf`;
@@ -539,17 +580,17 @@ const sendJobCompletionEmailToCustomer = async (jobCard, token = null) => {
         {
           filename,
           content: pdfBuffer,
-          contentType: 'application/pdf'
-        }
-      ]
+          contentType: "application/pdf",
+        },
+      ],
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Job completion email sent to customer:', info.messageId);
+    console.log("✅ Job completion email sent to customer:", info.messageId);
     console.log(`   📎 Attachment: ${filename}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Failed to send job completion email to customer:', error);
+    console.error("❌ Failed to send job completion email to customer:", error);
     return { success: false, error: error.message };
   }
 };
@@ -564,20 +605,20 @@ const sendTestEmail = async (toEmail) => {
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: toEmail,
-      subject: 'Test Email - Job Card System',
+      subject: "Test Email - Job Card System",
       html: `
         <h1>Email Configuration Test</h1>
         <p>If you're reading this, email notifications are working correctly!</p>
         <p><strong>Job Card System</strong><br/>
         Job Card Management System</p>
-      `
+      `,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Test email sent:', info.messageId);
+    console.log("✅ Test email sent:", info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Failed to send test email:', error);
+    console.error("❌ Failed to send test email:", error);
     return { success: false, error: error.message };
   }
 };
@@ -590,5 +631,5 @@ module.exports = {
   sendJobAssignmentEmail,
   sendJobCompletionEmailToSupervisor,
   sendJobCompletionEmailToCustomer,
-  sendTestEmail
+  sendTestEmail,
 };
