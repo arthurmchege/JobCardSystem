@@ -10,6 +10,89 @@ const fmtAgo = (ts) => {
   return `${Math.floor(secs / 3600)}h ago`;
 };
 
+// ─── Event config ────────────────────────────────────────────────────────────
+const EVENT_CONFIG = {
+  user_login: {
+    color: "bg-emerald-400",
+    glow: "0 0 6px #34d399",
+    pill: "bg-emerald-900/50 text-emerald-400",
+    label: "User Login",
+    summary: (m) => {
+      try {
+        const meta = typeof m === "string" ? JSON.parse(m) : m;
+        return meta?.email || "";
+      } catch {
+        return "";
+      }
+    },
+  },
+  login_failed: {
+    color: "bg-red-400",
+    glow: "0 0 6px #f87171",
+    pill: "bg-red-900/50 text-red-400",
+    label: "Login Failed",
+    summary: (m) => {
+      try {
+        const meta = typeof m === "string" ? JSON.parse(m) : m;
+        return `${meta?.email || ""} — ${meta?.reason || ""}`;
+      } catch {
+        return "";
+      }
+    },
+  },
+  job_assignment_email_sent: {
+    color: "bg-amber-400",
+    glow: "0 0 6px #fbbf24",
+    pill: "bg-amber-900/50 text-amber-400",
+    label: "Email Sent",
+    summary: (m) => {
+      try {
+        const meta = typeof m === "string" ? JSON.parse(m) : m;
+        return `To: ${meta?.email || ""}`;
+      } catch {
+        return "";
+      }
+    },
+  },
+  payment_verified: {
+    color: "bg-blue-400",
+    glow: "0 0 6px #60a5fa",
+    pill: "bg-blue-900/50 text-blue-400",
+    label: "Payment Verified",
+    summary: (m) => {
+      try {
+        const meta = typeof m === "string" ? JSON.parse(m) : m;
+        return `KES ${meta?.amount?.toLocaleString() || ""}`;
+      } catch {
+        return "";
+      }
+    },
+  },
+  payment_success: {
+    color: "bg-blue-400",
+    glow: "0 0 6px #60a5fa",
+    pill: "bg-blue-900/50 text-blue-400",
+    label: "M-Pesa Payment",
+    summary: (m) => {
+      try {
+        const meta = typeof m === "string" ? JSON.parse(m) : m;
+        return `KES ${meta?.amount?.toLocaleString() || ""} — ${meta?.receipt_number || ""}`;
+      } catch {
+        return "";
+      }
+    },
+  },
+};
+
+const getConfig = (eventType) =>
+  EVENT_CONFIG[eventType] || {
+    color: "bg-slate-400",
+    glow: "",
+    pill: "bg-slate-800 text-slate-400",
+    label: eventType,
+    summary: () => "",
+  };
+
 // ─── Gauge ring ──────────────────────────────────────────────────────────────
 const Gauge = ({ value, label, color }) => {
   const r = 28;
@@ -90,7 +173,36 @@ const ContainerRow = ({ c }) => {
   );
 };
 
-// ─── Backend Health Panel ────────────────────────────────────────────────────
+// ─── Activity row ─────────────────────────────────────────────────────────────
+const ActivityRow = ({ log }) => {
+  const cfg = getConfig(log.event_type);
+  const summary = cfg.summary(log.metadata);
+  return (
+    <div className="flex items-start gap-3 px-4 py-3 border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30 transition-colors">
+      <span
+        className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${cfg.color}`}
+        style={cfg.glow ? { boxShadow: cfg.glow } : {}}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-0.5">
+          <span
+            className={`px-2 py-0.5 rounded-full font-semibold text-[10px] uppercase ${cfg.pill}`}
+          >
+            {cfg.label}
+          </span>
+          <span className="text-[10px] text-slate-500 shrink-0">
+            {fmtAgo(log.created_at)}
+          </span>
+        </div>
+        {summary && (
+          <p className="text-xs text-slate-400 truncate">{summary}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Backend Health Panel ─────────────────────────────────────────────────────
 const BackendHealthPanel = ({ summary }) => {
   if (!summary) {
     return (
@@ -117,12 +229,9 @@ const BackendHealthPanel = ({ summary }) => {
       </div>
     );
   }
-
   const healthy = summary.current_status === "healthy";
-
   return (
     <div className="flex flex-wrap items-center gap-6 p-2">
-      {/* Status pill */}
       <div className="flex flex-col items-center gap-1.5">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
@@ -138,11 +247,7 @@ const BackendHealthPanel = ({ summary }) => {
           Status
         </span>
       </div>
-
-      {/* Uptime gauge */}
       <Gauge value={summary.uptime_percent} label="Uptime" color="#6366f1" />
-
-      {/* Stats */}
       <div className="space-y-2 text-xs text-slate-400 min-w-[160px]">
         <div className="flex justify-between gap-4">
           <span>Avg response</span>
@@ -169,16 +274,16 @@ const BackendHealthPanel = ({ summary }) => {
   );
 };
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 const MonitoringDashboard = () => {
   const [containers, setContainers] = useState([]);
   const [system, setSystem] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [activityLogs, setActivityLogs] = useState([]);
   const [wsStatus, setWsStatus] = useState("connecting");
   const [lastUpdate, setLastUpdate] = useState(null);
   const wsRef = useRef(null);
 
-  // ── WebSocket for live container updates ──
   useEffect(() => {
     const connect = () => {
       const ws = new WebSocket("wss://localhost/monitor/ws");
@@ -192,7 +297,7 @@ const MonitoringDashboard = () => {
           setContainers(data);
           setLastUpdate(new Date());
         } catch {
-          /* ignore malformed frames */
+          /* ignore */
         }
       };
     };
@@ -200,7 +305,6 @@ const MonitoringDashboard = () => {
     return () => wsRef.current?.close();
   }, []);
 
-  // ── HTTP poll for system stats (every 5s) ──
   useEffect(() => {
     const fetchSystem = async () => {
       try {
@@ -216,7 +320,6 @@ const MonitoringDashboard = () => {
     return () => clearInterval(id);
   }, []);
 
-  // ── HTTP poll for backend health summary (every 30s) ──
   useEffect(() => {
     const fetchSummary = async () => {
       try {
@@ -232,11 +335,26 @@ const MonitoringDashboard = () => {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch("/monitor/activity-logs");
+        const data = await res.json();
+        setActivityLogs(Array.isArray(data) ? data : []);
+      } catch {
+        /* monitor might be briefly down */
+      }
+    };
+    fetchLogs();
+    const id = setInterval(fetchLogs, 15000);
+    return () => clearInterval(id);
+  }, []);
+
   const runningCount = containers.filter((c) => c.status === "running").length;
 
   return (
     <div className="min-h-full">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="sup-title text-2xl font-bold text-slate-900">
@@ -265,7 +383,7 @@ const MonitoringDashboard = () => {
         </div>
       </div>
 
-      {/* ── System Resources ── */}
+      {/* System Resources */}
       <div className="bg-slate-900 rounded-2xl p-5 mb-5 border border-slate-800">
         <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
           Host Resources
@@ -327,29 +445,51 @@ const MonitoringDashboard = () => {
         )}
       </div>
 
-      {/* ── Containers ── */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden mb-5">
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-800">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            Docker Containers
-          </p>
-          <span className="text-xs font-semibold text-slate-400">
-            <span className="text-emerald-400">{runningCount}</span>
-            <span> / {containers.length} running</span>
-          </span>
-        </div>
-        {containers.length === 0 ? (
-          <div className="py-10 text-center text-slate-600 text-sm">
-            {wsStatus === "connecting"
-              ? "Connecting to monitor…"
-              : "No container data yet"}
+      {/* Containers + Activity Feed side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        {/* Containers */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-800">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              Docker Containers
+            </p>
+            <span className="text-xs font-semibold text-slate-400">
+              <span className="text-emerald-400">{runningCount}</span>
+              <span> / {containers.length} running</span>
+            </span>
           </div>
-        ) : (
-          containers.map((c) => <ContainerRow key={c.name} c={c} />)
-        )}
+          {containers.length === 0 ? (
+            <div className="py-10 text-center text-slate-600 text-sm">
+              {wsStatus === "connecting"
+                ? "Connecting to monitor…"
+                : "No container data yet"}
+            </div>
+          ) : (
+            containers.map((c) => <ContainerRow key={c.name} c={c} />)
+          )}
+        </div>
+
+        {/* Activity Feed */}
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-800">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              Activity Feed
+            </p>
+            <span className="text-xs text-slate-500">Refreshes every 15s</span>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-80">
+            {activityLogs.length === 0 ? (
+              <div className="py-10 text-center text-slate-600 text-sm">
+                No activity yet
+              </div>
+            ) : (
+              activityLogs.map((log) => <ActivityRow key={log.id} log={log} />)
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* ── Backend Health ── */}
+      {/* Backend Health */}
       <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-800">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
