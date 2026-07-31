@@ -23,12 +23,6 @@ router.post('/callback',
   paymentController.handleCallback
 );
 
-// GET PAYMENT STATUS
-// GET /api/v1/payments/:id
-router.get('/:id',
-  authenticate,
-  paymentController.getPaymentStatus
-);
 
 // GET ALL PAYMENTS FOR A JOB
 // GET /api/v1/payments/job/:jobId
@@ -36,6 +30,14 @@ router.get('/job/:jobId',
   authenticate,
   authorize(['supervisor']),
   paymentController.getJobPayments
+);
+
+
+// GET PAYMENT STATUS
+// GET /api/v1/payments/:id
+router.get('/:id',
+  authenticate,
+  paymentController.getPaymentStatus
 );
 
 module.exports = router;

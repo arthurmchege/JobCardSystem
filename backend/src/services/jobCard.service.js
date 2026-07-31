@@ -432,7 +432,7 @@ const updateJobCard = async (jobCardId, updateData) => {
       const error = new Error(
         "Cannot modify completed job cards. Completed jobs are immutable for data integrity.",
       );
-      error.statusCode(403);
+      error.statusCode = 403;
       throw error;
     }
   }

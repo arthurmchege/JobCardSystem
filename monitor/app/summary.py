@@ -12,7 +12,7 @@ async def get_monitoring_summary():
                 error_message,
                   checked_at
                     FROM health_check_logs
-                    ORDER BY checked_At DESC LIMIT 1
+                    ORDER BY checked_at DESC LIMIT 1
                       """  )
   latest = query[0]
   stats = await database.pool.fetchrow(
