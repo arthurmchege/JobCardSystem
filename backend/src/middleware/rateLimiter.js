@@ -42,7 +42,7 @@ const authLimiter = rateLimit({
   message: {
     success: false,
     error:
-      "To many login attempts from this IP, please try again after 15 minutes",
+      "Too many login attempts from this IP, please try again after 15 minutes",
   },
   standardHeaders: true,
   legacyHeaders: false,
