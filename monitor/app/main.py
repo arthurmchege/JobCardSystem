@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from app.config import settings
 from app.docker_monitor import get_docker_status
 from app.system_monitor import get_system_status
@@ -41,7 +41,7 @@ async def websocket_endpoint(websocket: WebSocket):
          await asyncio.sleep(5)
          data = get_docker_status()
          await manager.broadcast(data)
-  except:
+  except WebSocketDisconnect:
     manager.disconnect(websocket)
 
 @app.get("/summary")
