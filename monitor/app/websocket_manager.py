@@ -8,6 +8,12 @@ class WebSocketManager:
 
   async def broadcast(self, data):
     for websocket in self.connections:
-      await websocket.send_json(data)
+      try:
+          await websocket.send_json(data)
+      except Exception:
+          dead_connections.append(websocket)
+
+    for websocket in dead_connections:
+      self.connections.remove(websocket)
 
 manager = WebSocketManager()
