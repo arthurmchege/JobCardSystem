@@ -6,15 +6,14 @@ from app.system_monitor import get_system_status
 from app.websocket_manager import manager
 import asyncio
 from app.health_checker import health_check_loop
-from app.database import init_db
 from app.summary import get_monitoring_summary
 from app.activity_logs import get_activity_logs
-from monitor.app import database
 from app import database
 @asynccontextmanager
 async def lifespan(app):
     await database.init_db()
     asyncio.create_task(health_check_loop())
+    yield
     await database.pool.close()
 
 app = FastAPI(title="Monitor Service", version="1.0.0", lifespan=lifespan)
