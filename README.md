@@ -294,4 +294,4 @@ MIT License — free to use, modify, and distribute.
 
 ## Author
 
-Built by [Arthur Mulunda](https://github.com/Arthur040424)
+Built by [Arthur Mulunda](https://github.com/arthurmchege)
