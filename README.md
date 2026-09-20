@@ -1,5 +1,7 @@
 # Job Card System
 
+[![Foglamp Scan](https://img.shields.io/badge/Codebase_Scan-Foglamp-0090FD?style=for-the-badge&logo=radar)](https://www.foglamp.dev/scan/job-card-system-oeo1fi)
+
 A full-stack, multi-tenant job card management platform built for field service operations. Designed to be adopted by any organization that dispatches technicians to job sites — whether that's equipment maintenance, installations, repairs, or any other field service work.
 
 ---
@@ -81,6 +83,7 @@ The Job Card System digitizes the entire field service workflow — from job ass
 | Auth             | JWT, HTTP-only cookies        |
 
 ---
+
 
 ## Project Structure
 
